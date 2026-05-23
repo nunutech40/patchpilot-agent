@@ -1,0 +1,521 @@
+# Building Plan — Flutter Native Compliance MR Agent
+
+## Recommended Project Name
+
+**PatchPilot**
+
+Short description:
+
+> PatchPilot is an AI agent that watches native mobile platform updates, checks Flutter repositories, and creates GitLab Merge Requests with the required code changes.
+
+Why this name works:
+
+- Easy to remember.
+- Sounds like an agent that helps navigate code changes.
+- Not too tied to Flutter, so it can expand later to React Native, Android native, or iOS native.
+- Works well for a GitHub repo name: `patchpilot`, `patchpilot-ai`, or `patchpilot-agent`.
+
+## Alternative Names
+
+| Name | Vibe | Notes |
+|---|---|---|
+| **PatchPilot** | Clean, product-ready | Best overall pick |
+| **NativePatch** | Direct and technical | Very clear for mobile native updates |
+| **MRPilot** | GitLab-focused | Good if output is always Merge Request |
+| **ComplyBot** | Compliance-focused | Simple, but sounds more like a bot |
+| **RepoMedic** | Fun/dev-friendly | Suggests fixing broken repos |
+| **PolicyPatch** | Very descriptive | Strong for policy-driven code changes |
+| **FlutterFixer** | Niche Flutter | Good for MVP, less scalable later |
+| **UpdateForge** | Builder/product vibe | Good for hackathon/demo |
+
+Recommended GitHub repository name:
+
+```txt
+patchpilot-agent
+```
+
+---
+
+# Product Goal
+
+Build an AI automation tool that receives a GitLab Flutter repository list from a Telegram Bot, checks latest native mobile platform updates through Elastic, lets an AI Coding Agent modify the repository, and creates a GitLab Merge Request for human review.
+
+The final output is **not an auto-merge**. The final output is a **GitLab Merge Request reviewed by a human**.
+
+---
+
+# Final MVP Architecture
+
+```txt
+Flutter Developer
+  ↓ sends repo list
+Telegram Bot
+  ↓ forwards runtime input
+OpenClaw / AI Platform
+  ↓ asks for platform update context
+Elastic Context Layer
+  ↓ crawls / indexes
+Platform Policy Docs
+  - Google / Android
+  - Apple / iOS
+  - Flutter
+
+OpenClaw / AI Platform
+  ↓ gives repo list + Elastic context
+AI Coding Agent
+  ↓ reads repo, edits code, commits branch
+GitLab Repository
+  ↓ creates
+GitLab Merge Request
+  ↓ reviewed by
+Human Reviewer
+```
+
+---
+
+# Phase 0 — Repository Setup
+
+Goal: prepare the public GitHub repository safely.
+
+## Checklist
+
+- [ ] Create GitHub repository: `patchpilot-agent`.
+- [ ] Add `README.md` with project overview.
+- [ ] Add `.gitignore`.
+- [ ] Add `.env.example`.
+- [ ] Make sure `.env` is ignored.
+- [ ] Add `docs/PRD.md`.
+- [ ] Add `docs/TRD.md`.
+- [ ] Add `docs/BUILDING_PLAN.md`.
+- [ ] Add `diagrams/sequence-telegram-mvp.md`.
+- [ ] Add `diagrams/sequence-ideal-mongodb.md`.
+- [ ] Add license file.
+
+## Environment Variables
+
+Never commit real keys.
+
+```env
+TELEGRAM_BOT_TOKEN=
+GITLAB_TOKEN=
+ELASTICSEARCH_URL=
+ELASTICSEARCH_API_KEY=
+OPENCLAW_API_KEY=
+```
+
+Optional for the ideal version:
+
+```env
+MONGODB_URI=
+```
+
+---
+
+# Phase 1 — Telegram Bot Input
+
+Goal: allow Flutter Developer to send GitLab repo list through Telegram.
+
+## User Flow
+
+```txt
+Developer sends:
+/check
+https://gitlab.com/company/flutter-app-1
+https://gitlab.com/company/flutter-app-2
+```
+
+Bot forwards repo list to OpenClaw / AI Platform.
+
+## Checklist
+
+- [ ] Create Telegram Bot via BotFather.
+- [ ] Store `TELEGRAM_BOT_TOKEN` in env secrets.
+- [ ] Implement `/start` command.
+- [ ] Implement `/check` command.
+- [ ] Parse GitLab repository URLs from message.
+- [ ] Validate repository URL format.
+- [ ] Return error if no valid repo URL is found.
+- [ ] Forward valid repo list to OpenClaw workflow.
+- [ ] Send initial response: “Checking latest native platform updates…”
+
+## Acceptance Criteria
+
+- [ ] User can send one or more GitLab repo URLs.
+- [ ] Invalid input returns a helpful error.
+- [ ] Valid input triggers OpenClaw workflow.
+
+---
+
+# Phase 2 — Elastic Context Layer
+
+Goal: use Elastic as the platform update intelligence layer.
+
+Elastic replaces the earlier generic MCP layer. Elastic stores and retrieves platform policy context.
+
+## Data Sources
+
+Use one combined source group:
+
+```txt
+Platform Policy Docs
+- Google / Android Docs
+- Apple Developer / App Store Docs
+- Flutter Docs
+```
+
+## Elastic Components
+
+- Elastic Web Crawler / Policy Fetcher
+- Elasticsearch Index
+- Elastic Agent Builder
+
+## Checklist
+
+- [ ] Create Elasticsearch deployment.
+- [ ] Create index: `platform_policy_docs`.
+- [ ] Configure Elastic Web Crawler or custom fetcher.
+- [ ] Add seed URLs for Google / Apple / Flutter docs.
+- [ ] Index cleaned policy documents.
+- [ ] Add fields: `source`, `platform`, `title`, `url`, `content`, `last_seen_at`.
+- [ ] Create query/tool in Elastic Agent Builder.
+- [ ] Return structured update description to OpenClaw.
+
+## Example Structured Update Description
+
+```json
+{
+  "has_relevant_update": true,
+  "platform": "android",
+  "title": "Google Play target API level requirement update",
+  "summary": "Apps must target a newer Android API level for Play Store submission.",
+  "affected_project_areas": [
+    "android/app/build.gradle",
+    "android/build.gradle",
+    "AndroidManifest.xml"
+  ],
+  "recommended_action": "Inspect targetSdk, compileSdk, Gradle plugin compatibility, and permission behavior changes.",
+  "source_urls": [
+    "https://developer.android.com/..."
+  ]
+}
+```
+
+## Acceptance Criteria
+
+- [ ] Elastic can retrieve relevant Android/iOS/Flutter policy docs.
+- [ ] Elastic can return a structured update description.
+- [ ] OpenClaw can consume the Elastic response.
+
+---
+
+# Phase 3 — OpenClaw Workflow
+
+Goal: OpenClaw orchestrates the flow from Telegram input to AI Coding Agent execution.
+
+## Responsibilities
+
+OpenClaw should:
+
+- Receive repo list from Telegram Bot.
+- Ask Elastic for relevant update context.
+- Decide whether an MR is needed.
+- Send repo list + update description to AI Coding Agent.
+- Send result link back to Telegram.
+
+## Checklist
+
+- [ ] Create OpenClaw workflow/session.
+- [ ] Add Telegram input handler.
+- [ ] Add Elastic query step.
+- [ ] Add condition: no relevant update vs relevant update found.
+- [ ] Add AI Coding Agent task step.
+- [ ] Add Telegram notification step.
+- [ ] Add error handling.
+
+## Acceptance Criteria
+
+- [ ] OpenClaw can receive runtime repo input.
+- [ ] OpenClaw can query Elastic.
+- [ ] OpenClaw can trigger AI Coding Agent.
+- [ ] OpenClaw can send status back to Telegram.
+
+---
+
+# Phase 4 — GitLab Integration
+
+Goal: allow the AI Coding Agent to read repositories, create branches, commit changes, and open Merge Requests.
+
+## GitLab Tools Needed
+
+| Tool / API | Function in Project |
+|---|---|
+| Repository Files API | Read and update files in Flutter repo |
+| Branches API | Create fix branch from default branch |
+| Commits API | Commit generated changes |
+| Merge Requests API | Create MR for human review |
+| Project API | Resolve GitLab project ID from URL |
+
+## Checklist
+
+- [ ] Create GitLab personal/project access token.
+- [ ] Store `GITLAB_TOKEN` in env secrets.
+- [ ] Resolve project ID from GitLab repo URL.
+- [ ] Read repository tree.
+- [ ] Read target files:
+  - [ ] `pubspec.yaml`
+  - [ ] `android/app/build.gradle`
+  - [ ] `android/build.gradle`
+  - [ ] `AndroidManifest.xml`
+  - [ ] `ios/Podfile`
+  - [ ] `ios/Runner/Info.plist`
+- [ ] Create fix branch.
+- [ ] Commit code changes.
+- [ ] Create GitLab Merge Request.
+- [ ] Include policy explanation in MR description.
+
+## Acceptance Criteria
+
+- [ ] Agent can read repo files.
+- [ ] Agent can create branch.
+- [ ] Agent can commit changes.
+- [ ] Agent can open GitLab MR.
+
+---
+
+# Phase 5 — AI Coding Agent
+
+Goal: generate safe repository changes based on Elastic context.
+
+## Input
+
+```txt
+- GitLab repo URL(s)
+- Structured update description from Elastic
+- Platform target: Android / iOS / Flutter
+```
+
+## Agent Tasks
+
+```txt
+1. Read repository files.
+2. Identify affected native config.
+3. Decide required code changes.
+4. Generate code changes.
+5. Create branch.
+6. Commit changes.
+7. Create GitLab Merge Request.
+```
+
+## Checklist
+
+- [ ] Agent reads only the target repo.
+- [ ] Agent uses Elastic update description as policy context.
+- [ ] Agent does not browse random external sources.
+- [ ] Agent creates minimal code changes.
+- [ ] Agent avoids changing unrelated files.
+- [ ] Agent writes clear commit message.
+- [ ] Agent writes MR description with:
+  - [ ] What changed
+  - [ ] Why it changed
+  - [ ] Source policy reference
+  - [ ] Affected files
+  - [ ] Human review reminder
+
+## Acceptance Criteria
+
+- [ ] AI-generated MR is understandable by a human reviewer.
+- [ ] MR contains code diff and explanation.
+- [ ] MR does not auto-merge.
+
+---
+
+# Phase 6 — Validation and Safety
+
+Goal: reduce risk before MR is created.
+
+For hackathon MVP, validation can be lightweight.
+
+## Optional Validation Commands
+
+```bash
+flutter analyze
+flutter test
+flutter build apk --debug
+```
+
+## Checklist
+
+- [ ] Check whether Flutter is available in runtime.
+- [ ] If available, run `flutter analyze`.
+- [ ] If available, run basic build/test command.
+- [ ] If not available, mention validation not executed in MR description.
+- [ ] Never auto-merge MR.
+- [ ] Always require human review.
+
+## Acceptance Criteria
+
+- [ ] MR clearly states whether validation was run.
+- [ ] Human reviewer knows what to check.
+
+---
+
+# Phase 7 — Telegram Result Notification
+
+Goal: send final MR result back to developer.
+
+## Checklist
+
+- [ ] Send “No MR needed” if no relevant update exists.
+- [ ] Send MR link if MR was created.
+- [ ] Send failure message if agent fails.
+- [ ] Include short summary in Telegram message.
+
+## Example Success Message
+
+```txt
+PatchPilot created a GitLab Merge Request.
+
+Repo: company/flutter-app
+Update: Android target SDK requirement
+MR: https://gitlab.com/company/flutter-app/-/merge_requests/12
+
+Please review before merging.
+```
+
+## Acceptance Criteria
+
+- [ ] Developer receives MR link in Telegram.
+- [ ] Developer can open GitLab and review MR.
+
+---
+
+# Phase 8 — Demo Preparation
+
+Goal: prepare hackathon demo with a reliable story.
+
+## Demo Story
+
+```txt
+A Flutter developer sends a GitLab repo URL to PatchPilot via Telegram.
+PatchPilot checks Elastic for latest Google / Apple / Flutter platform updates.
+Elastic returns a relevant Android/iOS update.
+PatchPilot runs AI Coding Agent.
+The agent updates the Flutter native config.
+PatchPilot creates a GitLab Merge Request.
+Human reviewer reviews the MR.
+```
+
+## Checklist
+
+- [ ] Prepare demo GitLab Flutter repo.
+- [ ] Add intentionally outdated native config.
+- [ ] Prepare Elastic index with at least one relevant policy document.
+- [ ] Prepare Telegram Bot.
+- [ ] Prepare OpenClaw workflow.
+- [ ] Prepare successful MR example.
+- [ ] Prepare fallback recording/screenshots.
+- [ ] Prepare 2-minute pitch.
+
+---
+
+# Phase 9 — Ideal Version After Hackathon
+
+Goal: extend MVP into a persistent product.
+
+## Add MongoDB
+
+MongoDB is useful when repo list needs to persist per user account.
+
+## Checklist
+
+- [ ] Add user account model.
+- [ ] Save registered repositories by user.
+- [ ] Add dashboard for repo list.
+- [ ] Add scheduled scans.
+- [ ] Add scan history.
+- [ ] Add MR history.
+- [ ] Add organization/team support.
+
+---
+
+# Milestone Plan
+
+## Day 1
+
+- [ ] Finalize repo structure.
+- [ ] Create Telegram Bot.
+- [ ] Create Elastic index.
+- [ ] Prepare seed policy docs.
+
+## Day 2
+
+- [ ] Build OpenClaw flow.
+- [ ] Connect Telegram → OpenClaw.
+- [ ] Connect OpenClaw → Elastic.
+
+## Day 3
+
+- [ ] Build GitLab integration.
+- [ ] Implement branch + commit + MR creation.
+- [ ] Test on demo Flutter repo.
+
+## Day 4
+
+- [ ] Improve AI Coding Agent prompt/task.
+- [ ] Add MR description quality.
+- [ ] Add Telegram result notification.
+
+## Day 5
+
+- [ ] Polish demo.
+- [ ] Prepare slides/readme.
+- [ ] Record backup demo.
+
+---
+
+# Definition of Done for Hackathon MVP
+
+- [ ] Developer can send repo list through Telegram.
+- [ ] OpenClaw receives repo list.
+- [ ] Elastic returns structured platform update context.
+- [ ] AI Coding Agent reads GitLab repo.
+- [ ] AI Coding Agent creates code changes.
+- [ ] GitLab branch is created.
+- [ ] GitLab Merge Request is created.
+- [ ] Developer receives MR link in Telegram.
+- [ ] Human reviewer can approve or request changes.
+- [ ] No secret key is committed to the public repository.
+
+---
+
+# Non-Goals for MVP
+
+- [ ] Auto-merge to main branch.
+- [ ] Full multi-user dashboard.
+- [ ] Full scheduled scanning.
+- [ ] Support for every Google/Apple policy.
+- [ ] Support for non-Flutter repositories.
+- [ ] Perfect validation for every repo environment.
+
+---
+
+# Security Checklist
+
+- [ ] Never commit `.env`.
+- [ ] Use `.env.example` only.
+- [ ] Store Telegram token in runtime secrets.
+- [ ] Store GitLab token in runtime secrets.
+- [ ] Store Elastic API key in runtime secrets.
+- [ ] Use least-privilege GitLab token.
+- [ ] Do not expose secrets in MR description.
+- [ ] Do not send secrets to Telegram.
+- [ ] Do not log secrets in OpenClaw.
+
+---
+
+# Suggested README Tagline
+
+```txt
+PatchPilot — AI agent that turns mobile platform policy updates into GitLab Merge Requests for Flutter teams.
+```
+
