@@ -1,0 +1,91 @@
+# Local operational notes and credentials
+info
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.kubeconfig
+secrets/
+credentials/
+
+# OpenClaw / agent runtime artifacts
+.openclaw/
+workspace/
+workspaces/
+tmp/
+temp/
+evidence/
+reports/
+audit/
+sessions/
+session-store/
+
+# Dependency directories
+node_modules/
+vendor/
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+
+# JavaScript / TypeScript caches and builds
+.npm/
+.pnpm-store/
+.yarn/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Go build artifacts
+bin/
+*.test
+*.out
+
+# Flutter / Dart artifacts for cloned target repos
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+android/.gradle/
+android/app/build/
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+
+# Native mobile build artifacts
+.gradle/
+captures/
+*.apk
+*.aab
+*.ipa
+*.xcarchive
+DerivedData/
+
+# Logs and local databases
+*.log
+logs/
+*.sqlite
+*.sqlite3
+*.db
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Document editor lock / temp files
+~$*.docx
+*.tmp
