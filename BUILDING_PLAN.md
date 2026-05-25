@@ -93,9 +93,6 @@ Human Reviewer
 The agents share context only through Elastic. Agent 2 prepares reusable policy
 records. Agent 1 consumes those records and combines them with actual repo facts.
 
-OpenClaw is no longer the primary hackathon runtime. It remains only as a
-fallback/local prototype path.
-
 ---
 
 # Phase 0 — Repository Setup
@@ -331,7 +328,6 @@ See [`docs/google-cloud-hackathon-resources.md`](docs/google-cloud-hackathon-res
 - [ ] Use Cloud Run for custom backend/tool execution.
 - [ ] Use Secret Manager for GitLab, Telegram, Elastic, and Antigravity credentials.
 - [ ] Use Gemini or Agent Runtime for policy extraction/classification where needed.
-- [ ] Keep OpenClaw documented only as a local fallback/prototype.
 
 ---
 
@@ -512,7 +508,7 @@ Human reviewer reviews the MR.
 - [ ] Prepare Agent 2 `policy-context` ingestion workflow.
 - [ ] Prepare Antigravity CLI auth/config in isolated PatchPilot runtime.
 - [ ] Prepare successful MR example.
-- [ ] Prepare fallback recording/screenshots.
+- [ ] Prepare backup recording/screenshots.
 - [ ] Prepare 2-minute pitch.
 
 ---
@@ -618,7 +614,7 @@ MongoDB is useful when repo list needs to persist per user account.
 - [ ] Use least-privilege GitLab token.
 - [ ] Do not expose secrets in MR description.
 - [ ] Do not send secrets to Telegram.
-- [ ] Do not log secrets in Agent Builder, Cloud Run, or fallback OpenClaw.
+- [ ] Do not log secrets in Agent Builder or Cloud Run.
 
 ---
 

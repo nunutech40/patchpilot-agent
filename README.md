@@ -96,15 +96,12 @@ Start here:
 | [TRD_AI_Native_Compliance_Automation_Refactored.md](TRD_AI_Native_Compliance_Automation_Refactored.md) | Technical requirements, architecture, data models, command design, and integration details. |
 | [docs/google-cloud-hackathon-resources.md](docs/google-cloud-hackathon-resources.md) | Devpost and Google Cloud resource map used by the hackathon plan. |
 | [docs/google-cloud-agent-platform-architecture.md](docs/google-cloud-agent-platform-architecture.md) | Primary Google Cloud Agent Builder architecture, high-level flows, technology stack, and tool boundaries. |
-| [docs/openclaw-platform-architecture.md](docs/openclaw-platform-architecture.md) | Legacy/local OpenClaw fallback notes. |
 | [docs/policy-crawl-plan.md](docs/policy-crawl-plan.md) | Curated official sources to crawl and how Elastic should normalize policy context. |
-| [deploy/README.md](deploy/README.md) | Docker-first VPS deployment plan for PatchPilot. |
 | [diagrams/sequence-policy-ingestion.md](diagrams/sequence-policy-ingestion.md) | Background policy crawl/index flow, separate from repo checks. |
 | [diagrams/sequence-elastic-context-to-coding-agent.md](diagrams/sequence-elastic-context-to-coding-agent.md) | How indexed Elastic records become the Antigravity coding task payload. |
 | [diagrams/sequence-telegram-mvp.md](diagrams/sequence-telegram-mvp.md) | Telegram MVP sequence diagram with Antigravity as coding worker. |
 | [diagrams/sequence-ideal-mongodb.md](diagrams/sequence-ideal-mongodb.md) | Ideal MongoDB sequence diagram with Antigravity as coding worker. |
 | [.env.example](.env.example) | Local/runtime environment variable template. |
-| [deploy/.env.patchpilot.example](deploy/.env.patchpilot.example) | VPS-specific environment template. |
 
 External architecture references:
 
@@ -126,68 +123,14 @@ Reference document exports:
 | [PRD_AI_Native_Compliance_Automation_Refactored.docx](PRD_AI_Native_Compliance_Automation_Refactored.docx) | Word export of the PRD. |
 | [TRD_AI_Native_Compliance_Automation_Refactored.docx](TRD_AI_Native_Compliance_Automation_Refactored.docx) | Word export of the TRD. |
 
-Deployment helpers:
-
-| Script | Purpose |
-|---|---|
-| [scripts/preflight-vps.sh](scripts/preflight-vps.sh) | Checks OS, disk, RAM, ports, Docker, firewall, and reboot status on a fresh VPS. |
-| [scripts/bootstrap-vps.sh](scripts/bootstrap-vps.sh) | Installs Docker, creates the `patchpilot` user, prepares `/opt/patchpilot`, and enables basic firewall rules. |
-
 ## Deployment Rule
 
-PatchPilot's primary hackathon deployment should run on Google Cloud:
+PatchPilot's hackathon deployment runs on Google Cloud:
 
 - Agent Builder / Gemini Enterprise Agent Platform for the agent layer.
 - Cloud Run for Telegram webhook, GitLab/Antigravity tool backend, and policy ingestion.
 - Secret Manager for runtime secrets.
 - Elastic Cloud or managed Elasticsearch for policy context.
-
-The existing VPS/Docker/OpenClaw path is now a fallback or local prototype path.
-Do not deploy PatchPilot into an existing company OpenClaw runtime. Keep these separate:
-
-- VPS
-- Linux user
-- Docker Compose project
-- Docker network
-- Docker volumes
-- OpenClaw gateway port
-- OpenClaw agent definitions and tool allowlists
-- Antigravity CLI auth/config
-- Telegram bot token
-- GitLab token
-- Elastic index and API key
-
-Recommended target:
-
-```txt
-VPS name: patchpilot-openclaw
-Linux user: patchpilot
-App dir: /opt/patchpilot
-Gateway: 127.0.0.1:18889
-Compose project: patchpilot
-```
-
-## Fallback Fresh VPS Flow
-
-Only use this path for local fallback/prototype deployment. After a new Linux
-VPS and SSH access are available:
-
-```bash
-./scripts/preflight-vps.sh
-sudo ./scripts/bootstrap-vps.sh
-```
-
-Then copy the deployment files to the VPS:
-
-```bash
-cd /opt/patchpilot
-cp .env.patchpilot.example .env
-# Fill real secrets in .env on the VPS only.
-docker compose up -d --build
-docker compose ps
-```
-
-See [deploy/README.md](deploy/README.md) for the full deployment notes.
 
 ## Required Secrets
 
@@ -224,7 +167,6 @@ MONGODB_URI=
 - Secrets must stay in Secret Manager or runtime environment variables and be scoped by agent role.
 - Runtime MR Agent should have Elastic read access, GitLab access, Telegram access, and Antigravity access.
 - Policy Context Agent should have Elastic write/upsert access and no GitLab token.
-- PatchPilot should not run heavy Elasticsearch or Flutter builds on a small VPS.
 - GitLab CI should handle heavier validation when possible.
 
 ## Current Status
@@ -237,4 +179,4 @@ This repository currently contains planning docs and deployment preparation for 
 4. Implement Agent 1, `patchpilot-runtime`, for Telegram `/check`.
 5. Integrate Antigravity CLI as the coding worker.
 6. Implement GitLab read, branch, commit, and MR creation.
-7. Deploy the primary demo path on Google Cloud, with VPS/Docker kept as fallback only.
+7. Deploy the demo path on Google Cloud.

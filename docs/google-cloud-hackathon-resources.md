@@ -74,6 +74,3 @@ Cloud Scheduler / Cloud Run / Agent Runtime
      -> Gemini extraction/classification
      -> Elastic write/upsert
 ```
-
-OpenClaw can remain useful as a local fallback or previous prototype path, but
-it should not be described as the primary hackathon architecture.

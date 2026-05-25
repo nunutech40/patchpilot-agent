@@ -13,8 +13,7 @@ info
 secrets/
 credentials/
 
-# OpenClaw / agent runtime artifacts
-.openclaw/
+# Agent runtime artifacts
 workspace/
 workspaces/
 tmp/

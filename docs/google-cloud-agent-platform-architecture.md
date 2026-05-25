@@ -4,10 +4,6 @@ PatchPilot's primary hackathon architecture uses Google Cloud Agent Builder /
 Gemini Enterprise Agent Platform as the agent layer, with Cloud Run tool
 backends for code execution and partner integrations.
 
-OpenClaw is no longer the primary runtime for the hackathon plan. It can remain
-as a local fallback or prototype path, but the submitted architecture should
-lead with Google Cloud.
-
 ## Agent Topology
 
 ```txt
@@ -79,7 +75,6 @@ Telegram /check
 | Policy ingestion | Cloud Run job/service, scheduler, web fetcher | Fetches curated official Google / Apple / Flutter sources. |
 | AI extraction | Gemini through Agent Builder, Agent Runtime, or backend model call | Summarizes, classifies, extracts requirements, affected files, and generic coding guidance. |
 | Optional persistence | MongoDB | Stores repo lists in ideal account-based mode. |
-| Fallback deployment | VPS / Docker / OpenClaw | Local prototype only, not the primary hackathon architecture. |
 
 ## Tool Boundaries
 
@@ -123,4 +118,3 @@ ELASTICSEARCH_INDEX=platform_policy_updates
 - The runtime agent or Cloud Run backend must inspect the diff boundary before commit.
 - GitLab MR is the final output; no auto-merge.
 - Secrets must live in Secret Manager or deployment environment variables, never source code.
-
