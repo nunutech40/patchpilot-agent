@@ -49,6 +49,91 @@ The final output is **not an auto-merge**. The final output is a **GitLab Merge 
 
 ---
 
+# Pre-Build Preparation
+
+Goal: finish account, access, and platform setup before writing application
+code. This avoids building against unclear deployment targets or missing
+credentials.
+
+## Where This Runs
+
+PatchPilot should run on Google Cloud for the hackathon:
+
+- Agent layer: Google Cloud Agent Builder / Gemini Enterprise Agent Platform.
+- Tool execution: Cloud Run services/jobs.
+- Secrets: Secret Manager.
+- Policy context: Elastic Cloud or managed Elasticsearch.
+- Source control: GitLab.
+- User channel: Telegram Bot webhook routed to Cloud Run.
+
+Do not prepare a separate VPS. The custom code that needs a server should be
+packaged as Cloud Run services or jobs.
+
+## Accounts and Access
+
+- [ ] Confirm Google Cloud project ID and billing/credits.
+- [ ] Confirm Google Cloud region, recommended: `us-central1` unless a service requires another region.
+- [ ] Enable required Google Cloud APIs:
+  - [ ] Agent Builder / Gemini Enterprise Agent Platform APIs.
+  - [ ] Cloud Run API.
+  - [ ] Cloud Build API.
+  - [ ] Artifact Registry API.
+  - [ ] Secret Manager API.
+  - [ ] Cloud Scheduler API.
+  - [ ] Cloud Logging API.
+- [ ] Create service account for Agent Builder / extension execution.
+- [ ] Create service account for Cloud Run runtime backend.
+- [ ] Grant least-privilege IAM roles for Secret Manager, Cloud Run, logging, and any Agent Builder extension execution.
+
+## External Services
+
+- [ ] Create Telegram bot with BotFather.
+- [ ] Create GitLab demo project or choose existing demo Flutter repo.
+- [ ] Create least-privilege GitLab token for demo repos.
+- [ ] Create Elastic Cloud or managed Elasticsearch deployment.
+- [ ] Create Elastic index: `platform_policy_updates`.
+- [ ] Create separate Elastic API keys:
+  - [ ] Runtime read key.
+  - [ ] Policy ingestion write/upsert key.
+- [ ] Confirm Antigravity CLI install and auth method for Cloud Run.
+
+## Secret Manager Entries
+
+- [ ] Store `TELEGRAM_BOT_TOKEN`.
+- [ ] Store `GITLAB_TOKEN`.
+- [ ] Store `ELASTICSEARCH_URL`.
+- [ ] Store `ELASTIC_READ_API_KEY`.
+- [ ] Store `ELASTIC_WRITE_API_KEY`.
+- [ ] Store `ANTIGRAVITY_API_KEY` or equivalent Antigravity auth config.
+- [ ] Store optional `MONGODB_URI` only if ideal mode is being built.
+
+## Tool Contract Prep
+
+- [ ] Define Cloud Run runtime backend endpoints:
+  - [ ] `POST /runtime/check`
+  - [ ] `POST /elastic/query-policy`
+  - [ ] `POST /gitlab/prepare-workspace`
+  - [ ] `POST /antigravity/run`
+  - [ ] `POST /gitlab/create-merge-request`
+- [ ] Define Cloud Run policy ingestion endpoints:
+  - [ ] `POST /policy-ingestion/run`
+  - [ ] `GET /policy-ingestion/status`
+- [ ] Create OpenAPI spec for Agent Builder Extensions / custom tools.
+- [ ] Upload or register OpenAPI spec where Agent Builder can use it.
+- [ ] Decide whether policy ingestion is manual-only for demo or scheduled via Cloud Scheduler.
+
+## Pre-Build Acceptance Criteria
+
+- [ ] Google Cloud project is ready.
+- [ ] Required APIs are enabled.
+- [ ] Secret Manager contains all required secrets.
+- [ ] Elastic index exists.
+- [ ] Telegram bot token exists.
+- [ ] GitLab demo repo and token are ready.
+- [ ] Agent Builder can call at least one test Cloud Run endpoint.
+
+---
+
 # Final MVP Architecture
 
 ```txt
@@ -278,11 +363,11 @@ Gemini Enterprise Agent Platform and a Cloud Run tool backend.
 Agent 1 should:
 
 - Receive repo list from Telegram Bot.
-- Ask Elastic for relevant update context from already-indexed records.
+- Call the Cloud Run tool backend to ask Elastic for relevant update context from already-indexed records.
 - Decide whether an MR is needed.
-- Clone the GitLab repo into an isolated workspace.
-- Send repo workspace + update description to Antigravity CLI Coding Worker.
-- Inspect the generated diff before commit.
+- Ask the Cloud Run tool backend to clone the GitLab repo into an isolated workspace.
+- Ask the Cloud Run tool backend to send repo workspace + update description to Antigravity CLI Coding Worker.
+- Ask the Cloud Run tool backend to inspect the generated diff before commit.
 - Send result link back to Telegram.
 
 ## Checklist
@@ -297,7 +382,7 @@ Agent 1 should:
 - [ ] Add Elastic query step.
 - [ ] Add condition: no relevant update vs relevant update found.
 - [ ] Add GitLab clone/workspace preparation step.
-- [ ] Install/authenticate Antigravity CLI in the isolated PatchPilot runtime.
+- [ ] Install/authenticate Antigravity CLI in the Cloud Run runtime backend.
 - [ ] Generate Antigravity task prompt from Elastic update context plus repo facts.
 - [ ] Add Antigravity CLI Coding Worker task step.
 - [ ] Add diff inspection/safety boundary step.
@@ -307,8 +392,8 @@ Agent 1 should:
 ## Acceptance Criteria
 
 - [ ] Runtime MR Agent can receive runtime repo input.
-- [ ] Runtime MR Agent can query Elastic read-only.
-- [ ] Runtime MR Agent can trigger Antigravity CLI Coding Worker.
+- [ ] Runtime MR Agent can query Elastic read-only through the Cloud Run tool backend.
+- [ ] Runtime MR Agent can trigger Antigravity CLI Coding Worker through the Cloud Run tool backend.
 - [ ] Runtime MR Agent can stop safely if Antigravity CLI is unavailable.
 - [ ] Runtime MR Agent can send status back to Telegram.
 
@@ -333,7 +418,9 @@ See [`docs/google-cloud-hackathon-resources.md`](docs/google-cloud-hackathon-res
 
 # Phase 4 — GitLab Integration
 
-Goal: allow Runtime MR Agent/GitLab automation to read repositories, prepare workspaces, create branches, commit Antigravity-generated changes, and open Merge Requests.
+Goal: allow the Cloud Run tool backend / Runtime MR Agent to read repositories,
+prepare workspaces, create branches, commit Antigravity-generated changes, and
+open Merge Requests.
 
 ## GitLab Tools Needed
 
@@ -366,11 +453,11 @@ Goal: allow Runtime MR Agent/GitLab automation to read repositories, prepare wor
 
 ## Acceptance Criteria
 
-- [ ] Runtime MR Agent can prepare a cloned target repo workspace.
+- [ ] Cloud Run tool backend can prepare a cloned target repo workspace.
 - [ ] Antigravity can edit only the cloned target repo.
-- [ ] Runtime MR Agent can create branch.
-- [ ] Runtime MR Agent can commit changes.
-- [ ] Runtime MR Agent can open GitLab MR.
+- [ ] Cloud Run tool backend / Runtime MR Agent can create branch.
+- [ ] Cloud Run tool backend / Runtime MR Agent can commit changes.
+- [ ] Cloud Run tool backend / Runtime MR Agent can open GitLab MR.
 
 ---
 
@@ -405,8 +492,8 @@ Goal: generate safe repository changes based on Elastic context.
 - [ ] Antigravity creates minimal code changes.
 - [ ] Antigravity avoids changing unrelated files.
 - [ ] Antigravity writes a concise change summary for the MR.
-- [ ] Runtime MR Agent writes clear commit message.
-- [ ] Runtime MR Agent writes MR description with:
+- [ ] Cloud Run tool backend / Runtime MR Agent writes clear commit message.
+- [ ] Cloud Run tool backend / Runtime MR Agent writes MR description with:
   - [ ] What changed
   - [ ] Why it changed
   - [ ] Source policy reference
@@ -493,7 +580,7 @@ PatchPilot checks Elastic for latest Google / Apple / Flutter platform updates.
 Elastic returns a relevant Android/iOS update.
 PatchPilot runs Antigravity CLI Coding Worker.
 Antigravity updates the Flutter native config in the cloned workspace.
-Runtime MR Agent reviews the diff boundary and commits the branch.
+Cloud Run tool backend / Runtime MR Agent reviews the diff boundary and commits the branch.
 PatchPilot creates a GitLab Merge Request.
 Human reviewer reviews the MR.
 ```
@@ -504,9 +591,9 @@ Human reviewer reviews the MR.
 - [ ] Add intentionally outdated native config.
 - [ ] Prepare Elastic index with at least one relevant policy document.
 - [ ] Prepare Telegram Bot.
-- [ ] Prepare Agent 1 `patchpilot-runtime` workflow.
+- [ ] Prepare Agent Builder Agent 1 `patchpilot-runtime` workflow.
 - [ ] Prepare Agent 2 `policy-context` ingestion workflow.
-- [ ] Prepare Antigravity CLI auth/config in isolated PatchPilot runtime.
+- [ ] Prepare Antigravity CLI auth/config in Cloud Run runtime backend.
 - [ ] Prepare successful MR example.
 - [ ] Prepare backup recording/screenshots.
 - [ ] Prepare 2-minute pitch.
@@ -576,10 +663,10 @@ MongoDB is useful when repo list needs to persist per user account.
 - [ ] Developer can send repo list through Telegram.
 - [ ] Agent 1, `patchpilot-runtime`, receives repo list.
 - [ ] Elastic returns structured platform update context.
-- [ ] Agent 1 clones or fetches the GitLab repo into an isolated workspace.
+- [ ] Cloud Run tool backend clones or fetches the GitLab repo into an isolated workspace.
 - [ ] Antigravity CLI Coding Worker reads the cloned GitLab repo workspace.
 - [ ] Antigravity CLI Coding Worker creates code changes in the cloned workspace.
-- [ ] Agent 1 inspects generated diff before commit.
+- [ ] Cloud Run tool backend / Agent 1 inspects generated diff before commit.
 - [ ] Agent 2, `policy-context`, can run policy ingestion separately from `/check`.
 - [ ] Agent 2 writes normalized policy records with `recommended_action` and `coding_guidance`.
 - [ ] GitLab branch is created.
