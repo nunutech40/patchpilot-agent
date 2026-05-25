@@ -38,7 +38,7 @@ patchpilot-agent
 
 # Product Goal
 
-Build an AI automation tool that receives a GitLab Flutter repository list from a Telegram Bot, checks latest native mobile platform updates through Elastic, lets an AI Coding Agent modify the repository, and creates a GitLab Merge Request for human review.
+Build an AI automation tool that receives a GitLab Flutter repository list from a Telegram Bot, checks latest native mobile platform updates through Elastic, lets an Antigravity CLI Coding Worker modify the repository, and creates a GitLab Merge Request for human review.
 
 The final output is **not an auto-merge**. The final output is a **GitLab Merge Request reviewed by a human**.
 
@@ -62,8 +62,10 @@ Platform Policy Docs
 
 OpenClaw / AI Platform
   ↓ gives repo list + Elastic context
-AI Coding Agent
-  ↓ reads repo, edits code, commits branch
+Antigravity CLI Coding Worker
+  ↓ reads repo and edits code in cloned workspace
+OpenClaw GitLab automation
+  ↓ reviews diff, commits branch
 GitLab Repository
   ↓ creates
 GitLab Merge Request
@@ -101,6 +103,7 @@ GITLAB_TOKEN=
 ELASTICSEARCH_URL=
 ELASTICSEARCH_API_KEY=
 OPENCLAW_API_KEY=
+ANTIGRAVITY_API_KEY=
 ```
 
 Optional for the ideal version:
@@ -210,7 +213,7 @@ Platform Policy Docs
 
 # Phase 3 — OpenClaw Workflow
 
-Goal: OpenClaw orchestrates the flow from Telegram input to AI Coding Agent execution.
+Goal: OpenClaw orchestrates the flow from Telegram input to Antigravity CLI Coding Worker execution.
 
 ## Responsibilities
 
@@ -219,7 +222,9 @@ OpenClaw should:
 - Receive repo list from Telegram Bot.
 - Ask Elastic for relevant update context.
 - Decide whether an MR is needed.
-- Send repo list + update description to AI Coding Agent.
+- Clone the GitLab repo into an isolated workspace.
+- Send repo workspace + update description to Antigravity CLI Coding Worker.
+- Inspect the generated diff before commit.
 - Send result link back to Telegram.
 
 ## Checklist
@@ -228,7 +233,9 @@ OpenClaw should:
 - [ ] Add Telegram input handler.
 - [ ] Add Elastic query step.
 - [ ] Add condition: no relevant update vs relevant update found.
-- [ ] Add AI Coding Agent task step.
+- [ ] Add GitLab clone/workspace preparation step.
+- [ ] Add Antigravity CLI Coding Worker task step.
+- [ ] Add diff inspection/safety boundary step.
 - [ ] Add Telegram notification step.
 - [ ] Add error handling.
 
@@ -236,14 +243,14 @@ OpenClaw should:
 
 - [ ] OpenClaw can receive runtime repo input.
 - [ ] OpenClaw can query Elastic.
-- [ ] OpenClaw can trigger AI Coding Agent.
+- [ ] OpenClaw can trigger Antigravity CLI Coding Worker.
 - [ ] OpenClaw can send status back to Telegram.
 
 ---
 
 # Phase 4 — GitLab Integration
 
-Goal: allow the AI Coding Agent to read repositories, create branches, commit changes, and open Merge Requests.
+Goal: allow OpenClaw/GitLab automation to read repositories, prepare workspaces, create branches, commit Antigravity-generated changes, and open Merge Requests.
 
 ## GitLab Tools Needed
 
@@ -260,6 +267,7 @@ Goal: allow the AI Coding Agent to read repositories, create branches, commit ch
 - [ ] Create GitLab personal/project access token.
 - [ ] Store `GITLAB_TOKEN` in env secrets.
 - [ ] Resolve project ID from GitLab repo URL.
+- [ ] Clone or fetch repository into isolated workspace.
 - [ ] Read repository tree.
 - [ ] Read target files:
   - [ ] `pubspec.yaml`
@@ -275,14 +283,15 @@ Goal: allow the AI Coding Agent to read repositories, create branches, commit ch
 
 ## Acceptance Criteria
 
-- [ ] Agent can read repo files.
-- [ ] Agent can create branch.
-- [ ] Agent can commit changes.
-- [ ] Agent can open GitLab MR.
+- [ ] OpenClaw can prepare a cloned target repo workspace.
+- [ ] Antigravity can edit only the cloned target repo.
+- [ ] OpenClaw can create branch.
+- [ ] OpenClaw can commit changes.
+- [ ] OpenClaw can open GitLab MR.
 
 ---
 
-# Phase 5 — AI Coding Agent
+# Phase 5 — Antigravity CLI Coding Worker
 
 Goal: generate safe repository changes based on Elastic context.
 
@@ -301,9 +310,8 @@ Goal: generate safe repository changes based on Elastic context.
 2. Identify affected native config.
 3. Decide required code changes.
 4. Generate code changes.
-5. Create branch.
-6. Commit changes.
-7. Create GitLab Merge Request.
+5. Leave a reviewable working-tree diff.
+6. Report validation status and changed files.
 ```
 
 ## Checklist
@@ -313,8 +321,9 @@ Goal: generate safe repository changes based on Elastic context.
 - [ ] Agent does not browse random external sources.
 - [ ] Agent creates minimal code changes.
 - [ ] Agent avoids changing unrelated files.
-- [ ] Agent writes clear commit message.
-- [ ] Agent writes MR description with:
+- [ ] Agent writes a concise change summary for the MR.
+- [ ] OpenClaw writes clear commit message.
+- [ ] OpenClaw writes MR description with:
   - [ ] What changed
   - [ ] Why it changed
   - [ ] Source policy reference
@@ -323,8 +332,8 @@ Goal: generate safe repository changes based on Elastic context.
 
 ## Acceptance Criteria
 
-- [ ] AI-generated MR is understandable by a human reviewer.
-- [ ] MR contains code diff and explanation.
+- [ ] PatchPilot-generated MR is understandable by a human reviewer.
+- [ ] MR contains Antigravity-generated code diff and explanation.
 - [ ] MR does not auto-merge.
 
 ---
@@ -399,8 +408,9 @@ Goal: prepare hackathon demo with a reliable story.
 A Flutter developer sends a GitLab repo URL to PatchPilot via Telegram.
 PatchPilot checks Elastic for latest Google / Apple / Flutter platform updates.
 Elastic returns a relevant Android/iOS update.
-PatchPilot runs AI Coding Agent.
+PatchPilot runs Antigravity CLI Coding Worker.
 The agent updates the Flutter native config.
+OpenClaw reviews the diff boundary and commits the branch.
 PatchPilot creates a GitLab Merge Request.
 Human reviewer reviews the MR.
 ```
@@ -412,6 +422,7 @@ Human reviewer reviews the MR.
 - [ ] Prepare Elastic index with at least one relevant policy document.
 - [ ] Prepare Telegram Bot.
 - [ ] Prepare OpenClaw workflow.
+- [ ] Prepare Antigravity CLI auth/config in isolated PatchPilot runtime.
 - [ ] Prepare successful MR example.
 - [ ] Prepare fallback recording/screenshots.
 - [ ] Prepare 2-minute pitch.
@@ -456,12 +467,13 @@ MongoDB is useful when repo list needs to persist per user account.
 ## Day 3
 
 - [ ] Build GitLab integration.
+- [ ] Integrate Antigravity CLI coding worker.
 - [ ] Implement branch + commit + MR creation.
 - [ ] Test on demo Flutter repo.
 
 ## Day 4
 
-- [ ] Improve AI Coding Agent prompt/task.
+- [ ] Improve Antigravity CLI Coding Worker prompt/task and diff guardrails.
 - [ ] Add MR description quality.
 - [ ] Add Telegram result notification.
 
@@ -478,8 +490,9 @@ MongoDB is useful when repo list needs to persist per user account.
 - [ ] Developer can send repo list through Telegram.
 - [ ] OpenClaw receives repo list.
 - [ ] Elastic returns structured platform update context.
-- [ ] AI Coding Agent reads GitLab repo.
-- [ ] AI Coding Agent creates code changes.
+- [ ] Antigravity CLI Coding Worker reads GitLab repo.
+- [ ] Antigravity CLI Coding Worker creates code changes.
+- [ ] OpenClaw inspects generated diff before commit.
 - [ ] GitLab branch is created.
 - [ ] GitLab Merge Request is created.
 - [ ] Developer receives MR link in Telegram.
@@ -506,6 +519,7 @@ MongoDB is useful when repo list needs to persist per user account.
 - [ ] Store Telegram token in runtime secrets.
 - [ ] Store GitLab token in runtime secrets.
 - [ ] Store Elastic API key in runtime secrets.
+- [ ] Store Antigravity auth/config in runtime secrets or user-scoped CLI config.
 - [ ] Use least-privilege GitLab token.
 - [ ] Do not expose secrets in MR description.
 - [ ] Do not send secrets to Telegram.
@@ -518,4 +532,3 @@ MongoDB is useful when repo list needs to persist per user account.
 ```txt
 PatchPilot — AI agent that turns mobile platform policy updates into GitLab Merge Requests for Flutter teams.
 ```
-

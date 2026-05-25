@@ -7,13 +7,13 @@
 
 ## 1. Technical summary
 
-The system uses OpenClaw as the AI platform and Telegram interface, Elastic as the platform-policy context layer, and GitLab as the source-code and Merge Request system. The hackathon MVP avoids MongoDB by receiving repo URLs directly through Telegram and processing them as runtime input. The ideal mode adds MongoDB to persist repository lists by user account.
+The system uses OpenClaw as the orchestration platform and Telegram interface, Antigravity CLI as the coding worker, Elastic as the platform-policy context layer, and GitLab as the source-code and Merge Request system. The hackathon MVP avoids MongoDB by receiving repo URLs directly through Telegram and processing them as runtime input. The ideal mode adds MongoDB to persist repository lists by user account.
 
 ## 2. Architecture principles
 
 1. **Elastic owns policy context.** Google / Apple / Flutter docs are crawled/fetched and indexed in Elasticsearch.
-2. **OpenClaw orchestrates the agent flow.** It receives messages, calls tools, and hands context to AI Coding Agent.
-3. **AI Coding Agent owns code changes.** It reads repo files, changes code, creates branch, commits, and opens MR.
+2. **OpenClaw orchestrates the agent flow.** It receives messages, calls tools, queries Elastic, invokes Antigravity CLI, and creates the GitLab MR.
+3. **Antigravity CLI Coding Worker owns repository edits.** It reads repo files and generates code changes inside a cloned workspace; OpenClaw handles branch, commit, push, and MR creation.
 4. **GitLab owns source control and review.** Output is GitLab Merge Request, never direct merge.
 5. **Secrets stay outside source code.** All tokens and API keys are environment/runtime secrets.
 
@@ -32,7 +32,7 @@ sequenceDiagram
     end
     box AI Platform Area
         participant OpenClaw as OpenClaw / AI Platform
-        participant Agent as AI Coding Agent
+        participant Agent as Antigravity CLI Coding Worker
     end
     box Elastic Context Layer
         participant Elastic as Elastic Crawler + Index + Agent Builder
@@ -68,13 +68,13 @@ sequenceDiagram
         OpenClaw->>Dev: No Merge Request needed
     else Relevant update found
         OpenClaw->>Agent: Send repo list + Elastic update description
-        loop Until MR is ready
+        loop Until code diff is ready
             Agent->>Repo: Read repository files
             Agent->>Agent: Analyze affected Flutter / Android / iOS code
             Agent->>Agent: Generate code changes
-            Agent->>Repo: Create branch and commit changes
         end
-        Agent->>MR: Create GitLab Merge Request
+        OpenClaw->>Repo: Create branch and commit generated diff
+        OpenClaw->>MR: Create GitLab Merge Request
         MR->>Reviewer: Request human review
         Reviewer->>MR: Approve, merge, or request changes
     end
@@ -96,7 +96,7 @@ sequenceDiagram
     end
     box AI Platform Area
         participant OpenClaw as OpenClaw / AI Platform
-        participant Agent as AI Coding Agent
+        participant Agent as Antigravity CLI Coding Worker
     end
     box Elastic Context Layer
         participant Elastic as Elastic Crawler + Index + Agent Builder
@@ -129,13 +129,13 @@ sequenceDiagram
         Telegram->>Dev: Notify no relevant update found
     else Relevant update found
         OpenClaw->>Agent: Send repo list + Elastic update description
-        loop Until MR is ready
+        loop Until code diff is ready
             Agent->>Repo: Read repository files
             Agent->>Agent: Analyze affected Flutter / Android / iOS code
             Agent->>Agent: Generate code changes
-            Agent->>Repo: Create branch and commit changes
         end
-        Agent->>MR: Create GitLab Merge Request
+        OpenClaw->>Repo: Create branch and commit generated diff
+        OpenClaw->>MR: Create GitLab Merge Request
         OpenClaw->>Telegram: Send MR link to developer
         Telegram->>Dev: Notify GitLab MR is ready
         MR->>Reviewer: Request human review
@@ -151,12 +151,12 @@ sequenceDiagram
 |---|---|---|
 | Telegram channel | Receives `/check` messages and sends MR link back to developer. | OpenClaw supports channels and identifies Telegram as a fast setup with bot token. |
 | Tools layer | Lets the agent invoke typed functions such as `exec`, `browser`, `web_search`, and `message`. | Used for shell commands, outbound message, search/fetch if enabled. |
-| Skills | Defines how the AI Coding Agent should perform native-compliance remediation. | Create workspace skill: `flutter-native-compliance-agent`. |
+| Skills | Defines PatchPilot orchestration rules, diff boundaries, and how to call Antigravity CLI safely. | Create workspace skill: `patchpilot-orchestrator`. |
 | Plugins / bundles | Package channel integrations, model providers, MCP tools, hooks, or skills. | Useful if GitLab or Elastic integrations are packaged as plugins. |
 | Gateway | Runs OpenClaw as the message and agent runtime. | Required for Telegram bot routing. |
 | Message tool | Sends progress, no-action result, or MR link to Telegram. | Used for developer notification. |
-| Exec / terminal tool | Runs git, flutter, shell, or helper scripts if enabled. | Should be gated or sandboxed. |
-| File read/edit/apply_patch pattern | Reads and modifies cloned repo files in workspace. | May be implemented via built-in tools or custom wrapper. |
+| Exec / terminal tool | Runs git, Antigravity CLI, validation commands, or helper scripts if enabled. | Should be gated or sandboxed. |
+| File read/edit/apply_patch pattern | Used mainly for orchestration files, generated prompts, and diff inspection. | Antigravity should own source edits in the cloned target repo. |
 | Agent workspace | Temporary working directory for cloned GitLab repos. | Clean up after MR creation. |
 | Access control | Telegram allowlist, group allowlist, and activation/mention policy. | Prevent random users from triggering code changes. |
 
@@ -177,9 +177,9 @@ sequenceDiagram
 |---|---|---|
 | GitLab Repository | Source of Flutter project code. | Repos are maintained by Flutter Developer. |
 | Personal Access Token / Project Access Token | Authenticates read/write operations. | Use minimum required scope; keep secret. |
-| Repository clone / file read | Lets AI Coding Agent inspect `pubspec.yaml`, `android/`, `ios/`, CI config. | Can use `git clone` or GitLab repository/file APIs. |
+| Repository clone / file read | Lets Antigravity CLI Coding Worker inspect `pubspec.yaml`, `android/`, `ios/`, CI config. | Can use `git clone` or GitLab repository/file APIs. |
 | Branches API / git branch | Creates feature branch for remediation. | Branch name example: `ai/native-compliance-<date>`. |
-| Commits API / git commit | Commits generated code changes. | Commit message should mention AI-generated native compliance update. |
+| Commits API / git commit | Commits generated code changes. | Commit message should mention PatchPilot native compliance update. |
 | Merge Requests API | Creates GitLab MR with title, description, source branch, target branch. | GitLab API supports MR automation and code-review integrations. |
 | Merge Request approvals | Human reviewer can approve or request changes. | Automation must not auto-approve itself. |
 | CI pipeline, optional | Validates `flutter analyze`, `flutter test`, or build commands. | MVP can include status in MR if available. |
@@ -203,16 +203,16 @@ sequenceDiagram
 | Connection string | Connects OpenClaw/backend helper to database. | Store as `MONGODB_URI`; do not commit. |
 | Query by user account | Loads registered repositories for a specific user. | Replaces Telegram runtime repo list in ideal mode. |
 
-### 4.6 AI Coding Agent
+### 4.6 Antigravity CLI Coding Worker
 
 | Capability | Function |
 |---|---|
-| Understand structured update context | Receives Elastic policy description and repo list. |
-| Inspect repo | Reads project files and identifies native config impact. |
+| Understand structured update context | Receives Elastic policy description and cloned repo workspace path. |
+| Inspect repo | Reads project files in the cloned workspace and identifies native config impact. |
 | Generate changes | Updates files such as `android/app/build.gradle`, `AndroidManifest.xml`, `ios/Podfile`, `Info.plist`, or CI config if relevant. |
-| Git operations | Creates branch, commits, and pushes changes. |
-| MR creation | Opens GitLab Merge Request with structured explanation. |
-| Self-loop | Iterates until the MR-ready branch exists. |
+| Validation loop | Runs or requests lightweight validation when available. |
+| Diff output | Leaves a reviewable working-tree diff for OpenClaw to inspect. |
+| Scope control | Operates only inside the cloned target repository workspace. |
 
 ## 5. Data models
 
@@ -287,7 +287,7 @@ Human review required before merge.
 ```markdown
 # Native Compliance Update
 
-Generated by AI Native Compliance Agent. Human review required.
+Generated by PatchPilot Antigravity Coding Worker. Human review required.
 
 ## Policy Context
 - Source: Elastic indexed Google / Apple / Flutter docs
@@ -313,6 +313,7 @@ TELEGRAM_BOT_TOKEN=
 GITLAB_TOKEN=
 ELASTICSEARCH_URL=
 ELASTIC_API_KEY=
+ANTIGRAVITY_API_KEY=
 MONGODB_URI= # ideal mode only
 ```
 
@@ -324,6 +325,7 @@ Rules:
 - Log only token names, never token values.
 - Use least-privilege GitLab token.
 - Restrict Telegram input via allowlist.
+- Keep Antigravity CLI auth/config scoped to the PatchPilot container/user.
 
 ## 9. Implementation plan
 
@@ -333,9 +335,11 @@ Rules:
 2. Create `/check` command parsing skill.
 3. Configure Elastic crawler / fetcher for selected platform docs.
 4. Build Elastic index and Agent Builder query/tool.
-5. Implement AI Coding Agent skill for Flutter native compliance.
-6. Implement GitLab read/branch/commit/MR operations.
-7. Send final MR link to Telegram.
+5. Install and authenticate Antigravity CLI in the PatchPilot runtime.
+6. Implement Antigravity task prompt generation for Flutter native compliance.
+7. Implement diff inspection and safety checks before commit.
+8. Implement GitLab read/branch/commit/MR operations.
+9. Send final MR link to Telegram.
 
 ### Phase 2 - Ideal account-based mode
 
@@ -351,7 +355,7 @@ Rules:
 |---|---|
 | Telegram unauthorized user | Bot rejects or ignores request. |
 | Valid repo list, no relevant Elastic update | Bot returns no-MR-needed. |
-| Valid repo list, relevant Android update | AI creates branch and GitLab MR. |
+| Valid repo list, relevant Android update | Antigravity creates code diff; OpenClaw commits branch and creates GitLab MR. |
 | Invalid repo URL | Bot reports invalid input. |
 | Missing GitLab token | Tool fails safely without exposing secret. |
 | Elastic unavailable | Bot reports context provider unavailable. |
@@ -363,7 +367,8 @@ Rules:
 |---|---|
 | Elastic index empty | Return “policy context unavailable” and do not modify repo. |
 | GitLab repo inaccessible | Return error to Telegram. |
-| AI cannot determine safe fix | Create no MR; return explanation. |
+| Antigravity cannot determine safe fix | Create no MR; return explanation. |
+| Antigravity CLI unavailable | Stop before modifying repo and report coding worker unavailable. |
 | Commit fails | Stop and report failure. |
 | MR creation fails | Keep branch and report branch link if available. |
 
@@ -373,7 +378,8 @@ Rules:
 - Should Telegram command allow platform filter, such as Android-only?
 - Should generated MR be marked Draft by default?
 - Should Elastic crawler run scheduled or manually before each demo?
-- Should AI Coding Agent commit directly through Git CLI or GitLab API?
+- Should OpenClaw commit through local Git CLI or the GitLab Commits API after Antigravity generates the diff?
+- Which Antigravity CLI auth method will be used in the final VPS/container?
 
 
 ## References
@@ -383,6 +389,8 @@ Rules:
 - OpenClaw Telegram channel: https://docs.openclaw.ai/channels/telegram
 - OpenClaw channels overview: https://docs.openclaw.ai/channels
 - OpenClaw plugin bundles: https://docs.openclaw.ai/plugins/bundles
+- Antigravity CLI overview: https://antigravity.google/docs/cli-overview
+- Antigravity CLI features: https://antigravity.google/docs/cli-features
 - Elastic Agent Builder: https://www.elastic.co/docs/explore-analyze/ai-features/elastic-agent-builder
 - Elastic Web Crawler: https://www.elastic.co/guide/en/enterprise-search/current/crawler.html
 - Elastic Open Crawler: https://github.com/elastic/crawler
@@ -392,4 +400,3 @@ Rules:
 - MongoDB databases and collections: https://www.mongodb.com/docs/manual/core/databases-and-collections/
 - MongoDB connection strings: https://www.mongodb.com/docs/manual/reference/connection-string/
 - Telegram Bot API: https://core.telegram.org/bots/api
-

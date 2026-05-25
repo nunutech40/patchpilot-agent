@@ -2,7 +2,7 @@
 
 PatchPilot is an AI agent that turns mobile platform policy updates into GitLab Merge Requests for Flutter teams.
 
-The MVP flow is intentionally simple: a developer sends one or more GitLab Flutter repository URLs to a Telegram bot, PatchPilot checks indexed Google / Apple / Flutter policy context through Elastic, then an AI coding agent creates a GitLab Merge Request for human review.
+The MVP flow is intentionally simple: a developer sends one or more GitLab Flutter repository URLs to a Telegram bot, PatchPilot checks indexed Google / Apple / Flutter policy context through Elastic, then Antigravity CLI acts as the coding worker that updates the repository and prepares a GitLab Merge Request for human review.
 
 PatchPilot never auto-merges code.
 
@@ -11,6 +11,7 @@ PatchPilot never auto-merges code.
 - Accepts GitLab repository URLs through Telegram.
 - Uses Elastic as the platform-policy context layer.
 - Lets OpenClaw orchestrate the agent workflow.
+- Uses Antigravity CLI as the dedicated coding agent for repository inspection, edits, and validation.
 - Inspects Flutter native project files such as Android Gradle config, manifests, Podfiles, and iOS plist files.
 - Creates a branch, commits safe native-compliance changes, and opens a GitLab Merge Request.
 - Sends the MR result back to the developer.
@@ -22,7 +23,7 @@ Flutter Developer
   -> Telegram Bot
   -> OpenClaw / AI Platform
   -> Elastic Context Layer
-  -> AI Coding Agent
+  -> Antigravity CLI Coding Worker
   -> GitLab Branch + Merge Request
   -> Human Reviewer
 ```
@@ -34,6 +35,7 @@ The final output is a GitLab Merge Request reviewed by a human, not an automatic
 | Area | Tool |
 |---|---|
 | Agent orchestration | OpenClaw |
+| Coding worker | Antigravity CLI |
 | User input | Telegram Bot |
 | Policy context | Elastic / Elasticsearch |
 | Source control | GitLab |
@@ -69,6 +71,14 @@ Start here:
 | [.env.example](.env.example) | Local/runtime environment variable template. |
 | [deploy/.env.patchpilot.example](deploy/.env.patchpilot.example) | VPS-specific environment template. |
 
+External architecture references:
+
+| Reference | Purpose |
+|---|---|
+| [Antigravity CLI overview](https://antigravity.google/docs/cli-overview) | Coding-worker surface used by PatchPilot. |
+| [Antigravity CLI features](https://antigravity.google/docs/cli-features) | Subagents, tools, approvals, and coding workflow capabilities. |
+| [OpenClaw tools](https://docs.openclaw.ai/tools) | Orchestration tools, skills, runtime, messaging, and session capabilities. |
+
 Reference document exports:
 
 | File | Notes |
@@ -95,6 +105,7 @@ Do not deploy PatchPilot into an existing company OpenClaw runtime. Keep these s
 - Docker network
 - Docker volumes
 - OpenClaw gateway port
+- Antigravity CLI auth/config
 - Telegram bot token
 - GitLab token
 - Elastic index and API key
@@ -142,6 +153,7 @@ GITLAB_TOKEN=
 ELASTICSEARCH_URL=
 ELASTICSEARCH_API_KEY=
 OPENCLAW_API_KEY=
+ANTIGRAVITY_API_KEY=
 ```
 
 Optional for ideal mode:
@@ -153,7 +165,7 @@ MONGODB_URI=
 ## Safety Principles
 
 - Human review is always required before merge.
-- The agent should make minimal code changes.
+- Antigravity should make minimal code changes inside the cloned repository workspace only.
 - Elastic policy source URLs should be included in MR descriptions.
 - Secrets must stay in runtime environment variables.
 - PatchPilot should not run heavy Elasticsearch or Flutter builds on a small VPS.
@@ -165,6 +177,7 @@ This repository currently contains planning docs and deployment preparation for 
 
 1. Build the Telegram `/check` command handler.
 2. Configure Elastic policy index and query flow.
-3. Implement the OpenClaw PatchPilot agent/skill.
-4. Implement GitLab read, branch, commit, and MR creation.
-5. Deploy to a fresh VPS using the Docker-first plan.
+3. Implement the OpenClaw PatchPilot orchestrator skill.
+4. Integrate Antigravity CLI as the coding worker.
+5. Implement GitLab read, branch, commit, and MR creation.
+6. Deploy to a fresh VPS using the Docker-first plan.

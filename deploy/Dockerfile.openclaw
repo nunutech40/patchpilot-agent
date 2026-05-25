@@ -13,6 +13,10 @@ RUN apt-get update \
 
 RUN npm install -g "openclaw@${OPENCLAW_VERSION}"
 
+# Antigravity CLI is the PatchPilot coding worker.
+# Add the official Antigravity CLI install step here once the target VPS/auth
+# method is confirmed for the hackathon environment.
+
 RUN useradd --create-home --shell /bin/bash patchpilot
 USER patchpilot
 WORKDIR /home/patchpilot

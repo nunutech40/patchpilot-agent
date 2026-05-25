@@ -14,6 +14,7 @@ services:
       - "127.0.0.1:${PATCHPILOT_GATEWAY_PORT:-18889}:18889"
     volumes:
       - patchpilot_openclaw:/home/patchpilot/.openclaw
+      - patchpilot_gemini:/home/patchpilot/.gemini
       - patchpilot_workspace:/workspace
     mem_limit: 768m
     cpus: "1.50"
@@ -31,3 +32,5 @@ volumes:
     name: patchpilot_openclaw
   patchpilot_workspace:
     name: patchpilot_workspace
+  patchpilot_gemini:
+    name: patchpilot_gemini

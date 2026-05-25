@@ -3,6 +3,10 @@
 This folder is the clean deployment profile for the hackathon PatchPilot bot.
 It must not be mixed with the company-detector/OpenClaw VPS.
 
+OpenClaw is the orchestration runtime. Antigravity CLI is the coding worker that
+inspects cloned GitLab repositories, edits files, and runs lightweight
+validation commands.
+
 ## Target Isolation
 
 - Dedicated VPS name: `patchpilot-openclaw`
@@ -11,6 +15,7 @@ It must not be mixed with the company-detector/OpenClaw VPS.
 - Dedicated Docker Compose project: `patchpilot`
 - Dedicated OpenClaw data volume: `patchpilot_openclaw`
 - Dedicated workspace volume: `patchpilot_workspace`
+- Dedicated Antigravity auth/config inside the PatchPilot container or volume
 - Dedicated gateway port: `18889`
 - Bind gateway to localhost only: `127.0.0.1:18889`
 
@@ -40,8 +45,10 @@ managed Elasticsearch endpoint.
 2. Create or provide SSH access.
 3. Run `scripts/preflight-vps.sh` to inspect the box.
 4. Run `scripts/bootstrap-vps.sh` to install Docker and create the app user.
-5. Copy this repository's `deploy/` directory to `/opt/patchpilot`.
-6. On the VPS:
+5. Confirm the official Antigravity CLI install/auth method for the hackathon account.
+6. Add the Antigravity CLI install step to `Dockerfile.openclaw` or install it in a derived image.
+7. Copy this repository's `deploy/` directory to `/opt/patchpilot`.
+8. On the VPS:
 
 ```bash
 cd /opt/patchpilot
@@ -63,9 +70,13 @@ Required for MVP:
 - `ELASTICSEARCH_URL`
 - `ELASTICSEARCH_API_KEY`
 - `OPENCLAW_API_KEY` or the model-provider secret selected during OpenClaw setup
+- `ANTIGRAVITY_API_KEY` or the Antigravity auth method selected for the CLI
 
 Use a separate Telegram bot, separate GitLab token, and separate Elastic index
 from any company-detector environment.
+
+The current `Dockerfile.openclaw` intentionally leaves the Antigravity CLI
+install line as a TODO until the final CLI package and auth method are confirmed.
 
 ## Port Policy
 
@@ -95,6 +106,7 @@ PatchPilot should use remote services for heavy work:
 - Elastic Cloud for policy search
 - GitLab CI for Flutter build/test
 - GitLab API for branch/commit/MR operations
+- Antigravity CLI for code changes inside cloned workspaces only
 
 ## Separation Rules
 
@@ -104,3 +116,4 @@ PatchPilot should use remote services for heavy work:
 - Do not reuse company GitLab token.
 - Do not expose ports `3001`, `3002`, or `18789` for PatchPilot.
 - Do not run PatchPilot from the company OpenClaw gateway.
+- Do not let Antigravity operate outside `/workspace` or the cloned target repo.
