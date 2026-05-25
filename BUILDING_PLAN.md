@@ -291,6 +291,9 @@ Platform Policy Docs
 See [`docs/policy-crawl-plan.md`](docs/policy-crawl-plan.md) for the curated
 official source list and extraction schema.
 
+See [`diagrams/sequence-agent-builder-cloud-run-tools.md`](diagrams/sequence-agent-builder-cloud-run-tools.md)
+for the detailed Agent Builder Extension / Cloud Run tool boundary.
+
 See [`diagrams/sequence-policy-ingestion.md`](diagrams/sequence-policy-ingestion.md)
 for the background crawl/index flow and
 [`diagrams/sequence-elastic-context-to-coding-agent.md`](diagrams/sequence-elastic-context-to-coding-agent.md)

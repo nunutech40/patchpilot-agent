@@ -59,6 +59,9 @@ Telegram /check
 -> Telegram MR link
 ```
 
+For the detailed tool-call boundary between Agent Builder and Cloud Run, see
+[`diagrams/sequence-agent-builder-cloud-run-tools.md`](../diagrams/sequence-agent-builder-cloud-run-tools.md).
+
 ## Required Technologies
 
 | Layer | Technology | Purpose |
