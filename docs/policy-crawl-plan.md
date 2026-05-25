@@ -4,6 +4,9 @@ PatchPilot uses Elastic as the platform-policy context layer. This is not a
 general web crawler. It should crawl a curated set of official sources that can
 produce actionable GitLab Merge Requests for Flutter repositories.
 
+This is a separate ingestion flow. It should run as a scheduled worker or manual
+admin job, not inline with every Telegram `/check` request.
+
 ## Goal
 
 Convert official mobile platform policy and release information into structured
@@ -161,10 +164,10 @@ AI should not:
 
 ## OpenClaw Orchestrator Responsibilities
 
-OpenClaw is the runtime orchestrator. It should:
+OpenClaw is the runtime orchestrator for repository checks. It should:
 
 - Receive Telegram input.
-- Query Elastic for structured context.
+- Query Elastic for already-indexed structured context.
 - Decide no-action vs action-needed.
 - Clone/fetch the GitLab repo into an isolated workspace.
 - Generate the Antigravity task prompt.
@@ -174,3 +177,9 @@ OpenClaw is the runtime orchestrator. It should:
 
 Antigravity is the coding worker. Elastic is the context layer. OpenClaw is the
 orchestrator.
+
+## Runtime Boundary
+
+When a developer submits a repo, PatchPilot should not crawl Google, Apple, or
+Flutter docs in that request path. The runtime flow should only query Elastic
+records created by this ingestion flow.

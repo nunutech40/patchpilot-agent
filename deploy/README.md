@@ -16,6 +16,7 @@ validation commands.
 - Dedicated OpenClaw data volume: `patchpilot_openclaw`
 - Dedicated workspace volume: `patchpilot_workspace`
 - Dedicated Antigravity auth/config inside the PatchPilot container or volume
+- Optional dedicated policy ingestion worker for scheduled Elastic updates
 - Dedicated gateway port: `18889`
 - Bind gateway to localhost only: `127.0.0.1:18889`
 
@@ -104,6 +105,7 @@ This Compose profile caps the OpenClaw container:
 PatchPilot should use remote services for heavy work:
 
 - Elastic Cloud for policy search
+- Scheduled policy ingestion for official Google / Apple / Flutter docs
 - GitLab CI for Flutter build/test
 - GitLab API for branch/commit/MR operations
 - Antigravity CLI for code changes inside cloned workspaces only

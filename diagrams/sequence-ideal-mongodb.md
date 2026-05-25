@@ -1,7 +1,11 @@
 # Sequence Diagram - Ideal Mode with MongoDB and Antigravity
 
-This is the scalable product flow. Repository lists are stored by user/account
-and can be reused for future manual or scheduled checks.
+This is the scalable runtime product flow. Repository lists are stored by
+user/account and can be reused for future manual or scheduled checks.
+
+This flow queries policy records that were already indexed by the separate
+[policy ingestion flow](sequence-policy-ingestion.md). It should not crawl the
+internet for every repository scan.
 
 ```mermaid
 sequenceDiagram
@@ -17,10 +21,7 @@ sequenceDiagram
         participant Mongo as MongoDB
     end
     box Elastic Context Layer
-        participant Elastic as Elastic Crawler + Index + Agent Builder
-    end
-    box External Policy Source
-        participant Docs as Platform Policy Docs: Google / Apple / Flutter
+        participant Elastic as Elastic Index + Agent Builder
     end
     box Coding Worker Area
         participant Antigravity as Antigravity CLI Coding Worker
@@ -39,11 +40,7 @@ sequenceDiagram
     OpenClaw->>Mongo: Save repository list by user account
     OpenClaw->>Mongo: Load user's GitLab repository list when check starts
 
-    Elastic->>Docs: Crawl or fetch selected platform policy docs
-    Docs->>Elastic: Return policy, SDK, permission, and changelog data
-    Elastic->>Elastic: Index and normalize searchable policy context
-
-    OpenClaw->>Elastic: Ask for relevant native platform updates
+    OpenClaw->>Elastic: Query indexed policy updates for relevant native changes
     Elastic->>OpenClaw: Return structured update description
 
     alt No relevant update

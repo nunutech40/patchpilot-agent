@@ -52,13 +52,9 @@ Flutter Developer
 Telegram Bot
   ↓ forwards runtime input
 OpenClaw / AI Platform
-  ↓ asks for platform update context
+  ↓ queries already-indexed platform update context
 Elastic Context Layer
-  ↓ crawls / indexes
-Platform Policy Docs
-  - Google / Android
-  - Apple / iOS
-  - Flutter
+  ↓ returns structured policy update
 
 OpenClaw / AI Platform
   ↓ gives repo list + Elastic context
@@ -151,11 +147,11 @@ Bot forwards repo list to OpenClaw / AI Platform.
 
 ---
 
-# Phase 2 — Elastic Context Layer
+# Phase 2 — Elastic Policy Ingestion Flow
 
-Goal: use Elastic as the platform update intelligence layer.
+Goal: crawl and index official platform policy sources before runtime repo checks.
 
-Elastic replaces the earlier generic MCP layer. Elastic stores and retrieves platform policy context.
+This flow is separate from Telegram `/check`. It should run on a schedule or manual admin trigger, not every time a developer submits a repo.
 
 ## Data Sources
 
@@ -215,6 +211,7 @@ official source list and extraction schema.
 - [ ] Elastic can retrieve relevant Android/iOS/Flutter policy docs.
 - [ ] Elastic can return a structured update description.
 - [ ] OpenClaw can consume the Elastic response.
+- [ ] Runtime repo checks can query Elastic without crawling the internet.
 
 ---
 
@@ -227,7 +224,7 @@ Goal: OpenClaw orchestrates the flow from Telegram input to Antigravity CLI Codi
 OpenClaw should:
 
 - Receive repo list from Telegram Bot.
-- Ask Elastic for relevant update context.
+- Ask Elastic for relevant update context from already-indexed records.
 - Decide whether an MR is needed.
 - Clone the GitLab repo into an isolated workspace.
 - Send repo workspace + update description to Antigravity CLI Coding Worker.

@@ -1,7 +1,11 @@
 # Sequence Diagram - Telegram MVP with Antigravity
 
-This is the hackathon MVP flow. Repository input is provided at runtime through
-Telegram. No MongoDB persistence is required.
+This is the hackathon MVP runtime flow. Repository input is provided at runtime
+through Telegram. No MongoDB persistence is required.
+
+This flow queries policy records that were already indexed by the separate
+[policy ingestion flow](sequence-policy-ingestion.md). It should not crawl the
+internet on every `/check` request.
 
 ```mermaid
 sequenceDiagram
@@ -17,10 +21,7 @@ sequenceDiagram
         participant OpenClaw as OpenClaw Orchestrator
     end
     box Elastic Context Layer
-        participant Elastic as Elastic Crawler + Index + Agent Builder
-    end
-    box External Policy Source
-        participant Docs as Platform Policy Docs: Google / Apple / Flutter
+        participant Elastic as Elastic Index + Agent Builder
     end
     box Coding Worker Area
         participant Antigravity as Antigravity CLI Coding Worker
@@ -38,11 +39,7 @@ sequenceDiagram
     Telegram->>OpenClaw: Forward repo list as runtime input
     OpenClaw->>Secrets: Read Telegram / Elastic / GitLab / Antigravity config
 
-    Elastic->>Docs: Crawl or fetch selected platform policy docs
-    Docs->>Elastic: Return policy, SDK, permission, and changelog data
-    Elastic->>Elastic: Index and normalize searchable policy context
-
-    OpenClaw->>Elastic: Ask for relevant native platform updates
+    OpenClaw->>Elastic: Query indexed policy updates for relevant native changes
     Elastic->>OpenClaw: Return structured update description
 
     alt No relevant update

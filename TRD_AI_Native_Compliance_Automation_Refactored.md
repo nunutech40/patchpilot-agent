@@ -35,10 +35,7 @@ sequenceDiagram
         participant Agent as Antigravity CLI Coding Worker
     end
     box Elastic Context Layer
-        participant Elastic as Elastic Crawler + Index + Agent Builder
-    end
-    box External Policy Source
-        participant Docs as Platform Policy Docs: Google / Apple / Flutter
+        participant Elastic as Elastic Index + Agent Builder
     end
     box Data Storage Area
         participant Mongo as MongoDB
@@ -57,11 +54,7 @@ sequenceDiagram
     OpenClaw->>Mongo: Save repository list by user account
     OpenClaw->>Mongo: Get user's GitLab repository list
 
-    Elastic->>Docs: Crawl / fetch platform policy docs
-    Docs->>Elastic: Return SDK, permission, store, and Flutter updates
-    Elastic->>Elastic: Index docs and build searchable update context
-
-    OpenClaw->>Elastic: Ask for relevant native app updates
+    OpenClaw->>Elastic: Query already-indexed native app policy updates
     Elastic->>OpenClaw: Return structured update description
 
     alt No relevant update
@@ -99,10 +92,7 @@ sequenceDiagram
         participant Agent as Antigravity CLI Coding Worker
     end
     box Elastic Context Layer
-        participant Elastic as Elastic Crawler + Index + Agent Builder
-    end
-    box External Policy Source
-        participant Docs as Platform Policy Docs: Google / Apple / Flutter
+        participant Elastic as Elastic Index + Agent Builder
     end
     box GitLab Area
         participant Repo as GitLab Repository
@@ -117,11 +107,7 @@ sequenceDiagram
     Telegram->>OpenClaw: Forward repo list as runtime input
     OpenClaw->>Secrets: Read Elastic / GitLab / Telegram secrets
 
-    Elastic->>Docs: Crawl / fetch platform policy docs
-    Docs->>Elastic: Return latest policy and changelog data
-    Elastic->>Elastic: Index docs and build searchable context
-
-    OpenClaw->>Elastic: Ask for relevant native app updates
+    OpenClaw->>Elastic: Query already-indexed native app policy updates
     Elastic->>OpenClaw: Return structured update description
 
     alt No relevant update

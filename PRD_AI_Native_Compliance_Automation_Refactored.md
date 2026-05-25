@@ -59,10 +59,7 @@ sequenceDiagram
         participant Agent as Antigravity CLI Coding Worker
     end
     box Elastic Context Layer
-        participant Elastic as Elastic Crawler + Index + Agent Builder
-    end
-    box External Policy Source
-        participant Docs as Platform Policy Docs: Google / Apple / Flutter
+        participant Elastic as Elastic Index + Agent Builder
     end
     box Data Storage Area
         participant Mongo as MongoDB
@@ -81,11 +78,7 @@ sequenceDiagram
     OpenClaw->>Mongo: Save repository list by user account
     OpenClaw->>Mongo: Get user's GitLab repository list
 
-    Elastic->>Docs: Crawl / fetch platform policy docs
-    Docs->>Elastic: Return SDK, permission, store, and Flutter updates
-    Elastic->>Elastic: Index docs and build searchable update context
-
-    OpenClaw->>Elastic: Ask for relevant native app updates
+    OpenClaw->>Elastic: Query already-indexed native app policy updates
     Elastic->>OpenClaw: Return structured update description
 
     alt No relevant update
@@ -125,10 +118,7 @@ sequenceDiagram
         participant Agent as Antigravity CLI Coding Worker
     end
     box Elastic Context Layer
-        participant Elastic as Elastic Crawler + Index + Agent Builder
-    end
-    box External Policy Source
-        participant Docs as Platform Policy Docs: Google / Apple / Flutter
+        participant Elastic as Elastic Index + Agent Builder
     end
     box GitLab Area
         participant Repo as GitLab Repository
@@ -143,11 +133,7 @@ sequenceDiagram
     Telegram->>OpenClaw: Forward repo list as runtime input
     OpenClaw->>Secrets: Read Elastic / GitLab / Telegram secrets
 
-    Elastic->>Docs: Crawl / fetch platform policy docs
-    Docs->>Elastic: Return latest policy and changelog data
-    Elastic->>Elastic: Index docs and build searchable context
-
-    OpenClaw->>Elastic: Ask for relevant native app updates
+    OpenClaw->>Elastic: Query already-indexed native app policy updates
     Elastic->>OpenClaw: Return structured update description
 
     alt No relevant update
@@ -175,8 +161,8 @@ sequenceDiagram
 
 1. Flutter Developer sends `/check` command with GitLab repo URLs to Telegram Bot.
 2. OpenClaw receives the Telegram input and extracts repo URLs.
-3. OpenClaw asks Elastic for relevant native platform updates.
-4. Elastic searches indexed Google / Apple / Flutter docs and returns a structured update description.
+3. OpenClaw asks Elastic for relevant native platform updates from the already-indexed policy context.
+4. Elastic searches indexed Google / Apple / Flutter records and returns a structured update description.
 5. If no relevant update exists, OpenClaw replies in Telegram: `No Merge Request needed`.
 6. If an update is relevant, OpenClaw sends repo list and update description to Antigravity CLI Coding Worker.
 7. Antigravity CLI Coding Worker reads GitLab repository files and modifies code inside the cloned workspace.
