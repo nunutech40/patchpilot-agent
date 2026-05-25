@@ -166,7 +166,7 @@ sequenceDiagram
 |---|---|---|
 | Elastic Web Crawler or Open Crawler | Crawls/fetches platform policy docs from Google / Apple / Flutter. | Elastic docs describe web crawler as discovering, extracting, and indexing searchable web content. |
 | Elasticsearch Index | Stores cleaned platform policy documents and summaries. | Suggested index: `platform_policy_updates`. |
-| Elastic Agent Builder | Searches indexed docs and returns structured update descriptions. | Agent Builder can create agents/tools that query Elasticsearch indices. |
+| Elastic Agent Builder | Searches indexed docs and returns structured update descriptions. | AI may summarize, classify, extract requirements, and score relevance. It must not modify repos or create MRs. |
 | Custom search / ES query tool | Finds latest relevant policy update by platform and date. | Could be semantic, keyword, or hybrid query. |
 | Enrichment pipeline | Normalizes crawled docs into `platform`, `requirement`, `affected_files`, `severity`, `source_url`. | Can be simple script for MVP. |
 | Elastic API key | Programmatic access to Elastic APIs / Agent Builder. | Keep in env secrets. |

@@ -174,6 +174,9 @@ Platform Policy Docs
 - Elasticsearch Index
 - Elastic Agent Builder
 
+See [`docs/policy-crawl-plan.md`](docs/policy-crawl-plan.md) for the curated
+official source list and extraction schema.
+
 ## Checklist
 
 - [ ] Create Elasticsearch deployment or Elastic Cloud project.
@@ -182,6 +185,8 @@ Platform Policy Docs
 - [ ] Add seed URLs for Google / Apple / Flutter docs.
 - [ ] Index cleaned policy documents.
 - [ ] Add fields: `source`, `platform`, `title`, `url`, `content`, `summary`, `affected_files`, `severity`, `last_crawled_at`.
+- [ ] Extract structured requirements: API level, SDK version, tool version, effective date, severity, and likely affected files.
+- [ ] Use AI only for summarization, classification, extraction, and relevance scoring.
 - [ ] Create query/tool in Elastic Agent Builder.
 - [ ] Return structured update description to OpenClaw.
 
