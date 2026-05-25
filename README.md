@@ -68,6 +68,8 @@ Start here:
 | [PRD_AI_Native_Compliance_Automation_Refactored.md](PRD_AI_Native_Compliance_Automation_Refactored.md) | Product requirements, users, goals, flows, success metrics, and risks. |
 | [TRD_AI_Native_Compliance_Automation_Refactored.md](TRD_AI_Native_Compliance_Automation_Refactored.md) | Technical requirements, architecture, data models, command design, and integration details. |
 | [deploy/README.md](deploy/README.md) | Docker-first VPS deployment plan for PatchPilot. |
+| [diagrams/sequence-telegram-mvp.md](diagrams/sequence-telegram-mvp.md) | Telegram MVP sequence diagram with Antigravity as coding worker. |
+| [diagrams/sequence-ideal-mongodb.md](diagrams/sequence-ideal-mongodb.md) | Ideal MongoDB sequence diagram with Antigravity as coding worker. |
 | [.env.example](.env.example) | Local/runtime environment variable template. |
 | [deploy/.env.patchpilot.example](deploy/.env.patchpilot.example) | VPS-specific environment template. |
 

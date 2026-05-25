@@ -45,7 +45,7 @@ Flutter developers often discover native platform changes late: target SDK chang
 
 Used when the product becomes more than a hackathon demo. The Flutter Developer inputs repo list once, OpenClaw stores it in MongoDB by user account, and future checks can retrieve the user repository list.
 
-![Ideal Sequence](sequence_ideal_mongodb.png)
+[Standalone diagram](diagrams/sequence-ideal-mongodb.md)
 
 ```mermaid
 sequenceDiagram
@@ -108,7 +108,7 @@ sequenceDiagram
 
 Used for fast demo and simple user experience. The Flutter Developer sends repo list via Telegram. OpenClaw processes it immediately and does not persist repo list in MongoDB.
 
-![Telegram MVP Sequence](sequence_telegram_no_mongodb.png)
+[Standalone diagram](diagrams/sequence-telegram-mvp.md)
 
 ```mermaid
 sequenceDiagram

@@ -21,7 +21,7 @@ The system uses OpenClaw as the orchestration platform and Telegram interface, A
 
 ### 3.1 Ideal mode - with MongoDB repository persistence
 
-![Ideal Sequence](sequence_ideal_mongodb.png)
+[Standalone diagram](diagrams/sequence-ideal-mongodb.md)
 
 ```mermaid
 sequenceDiagram
@@ -82,7 +82,7 @@ sequenceDiagram
 
 ### 3.2 Hackathon MVP - Telegram input, no MongoDB
 
-![Telegram MVP Sequence](sequence_telegram_no_mongodb.png)
+[Standalone diagram](diagrams/sequence-telegram-mvp.md)
 
 ```mermaid
 sequenceDiagram
