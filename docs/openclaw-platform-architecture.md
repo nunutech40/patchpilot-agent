@@ -63,7 +63,7 @@ Telegram /check
 | Policy search | Elasticsearch / Elastic Agent Builder | Stores and retrieves normalized policy updates. |
 | Source control | GitLab API or Git CLI | Clone repo, create branch, commit diff, create MR. |
 | Policy ingestion | Web crawler/fetcher | Fetches curated official Google / Apple / Flutter sources. |
-| AI extraction | Model provider through OpenClaw/Elastic flow | Summarizes, classifies, extracts requirements and affected files. |
+| AI extraction | Model provider through OpenClaw/Elastic flow | Summarizes, classifies, extracts requirements, affected files, and generic coding guidance. |
 | Optional persistence | MongoDB | Stores repo lists in ideal account-based mode. |
 | Runtime isolation | Docker Compose | Runs PatchPilot separately from company systems. |
 

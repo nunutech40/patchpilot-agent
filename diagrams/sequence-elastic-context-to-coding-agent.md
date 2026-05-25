@@ -1,28 +1,36 @@
-# Sequence Diagram - Elastic Context to Antigravity Coding Task
+# Sequence Diagram - Elastic Policy Record to Antigravity Coding Task
 
-This flow defines how already-indexed Elastic policy records become the coding
-task that Antigravity receives. It runs during `/check`, after policy ingestion
-has already populated Elastic.
+This flow runs during `/check`, after the Policy Context Agent has already
+crawled official sources and saved normalized policy records in Elastic.
+
+The Policy Context Agent defines the generic policy requirement, likely affected
+files, recommended action, source URLs, severity, and guardrail hints. The
+Runtime MR Agent adds repo-specific facts, then builds the concrete Antigravity
+coding task.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant OpenClaw as Runtime MR Agent
+    participant Policy as Policy Context Agent
     participant Elastic as Elastic Index + Agent Builder
+    participant Runtime as Runtime MR Agent
     participant GitLab as GitLab Repository
     participant Context as Context Builder
     participant Antigravity as Antigravity CLI Coding Worker
 
-    OpenClaw->>Elastic: Query by repo platform, current date, severity, and source freshness
+    Note over Policy,Elastic: Earlier background ingestion flow
+    Policy->>Elastic: Upsert policy_update with requirement, affected files, source URLs, recommended action
+
+    Runtime->>Elastic: Query by repo platform, current date, severity, and source freshness
     Elastic->>Elastic: Retrieve matching policy_update records
-    Elastic->>OpenClaw: Return structured policy context payload
-    OpenClaw->>GitLab: Clone/fetch repo into isolated workspace
-    OpenClaw->>GitLab: Inspect target files and detect current native config
-    OpenClaw->>Context: Combine policy context + repo facts
-    Context->>Context: Build Antigravity task prompt and guardrails
+    Elastic->>Runtime: Return generic policy context and coding guidance
+    Runtime->>GitLab: Clone/fetch repo into isolated workspace
+    Runtime->>GitLab: Inspect target files and detect current native config
+    Runtime->>Context: Combine policy context + repo facts
+    Context->>Context: Build concrete Antigravity task prompt and guardrails
     Context->>Antigravity: Send workspace path + coding task payload
     Antigravity->>Antigravity: Plan minimal native-compliance edits
     Antigravity->>GitLab: Edit cloned workspace files only
-    Antigravity->>OpenClaw: Return changed files, summary, validation status
-    OpenClaw->>OpenClaw: Inspect diff boundary before commit
+    Antigravity->>Runtime: Return changed files, summary, validation status
+    Runtime->>Runtime: Inspect diff boundary before commit
 ```

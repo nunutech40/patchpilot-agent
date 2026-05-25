@@ -192,7 +192,7 @@ for how Elastic records become an Antigravity coding task.
 - [ ] Add seed URLs for Google / Apple / Flutter docs.
 - [ ] Index cleaned policy documents.
 - [ ] Add fields: `source`, `platform`, `title`, `url`, `content`, `summary`, `affected_files`, `severity`, `last_crawled_at`.
-- [ ] Extract structured requirements: API level, SDK version, tool version, effective date, severity, and likely affected files.
+- [ ] Extract structured requirements: API level, SDK version, tool version, effective date, severity, likely affected files, recommended action, and generic coding guidance.
 - [ ] Use AI only for summarization, classification, extraction, and relevance scoring.
 - [ ] Create query/tool in Elastic Agent Builder.
 - [ ] Return structured update description to the Runtime MR Agent.
@@ -212,6 +212,16 @@ for how Elastic records become an Antigravity coding task.
     "AndroidManifest.xml"
   ],
   "recommended_action": "Inspect targetSdk, compileSdk, Gradle plugin compatibility, and permission behavior changes.",
+  "coding_guidance": {
+    "goal": "Bring Android native config into compliance with the policy requirement.",
+    "likely_actions": [
+      "Inspect current targetSdk and compileSdk values.",
+      "Update Android build config only when compatibility is clear."
+    ],
+    "do_not_change": [
+      "Do not modify app business logic."
+    ]
+  },
   "source_urls": [
     "https://developer.android.com/..."
   ]

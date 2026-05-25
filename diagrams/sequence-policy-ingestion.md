@@ -27,8 +27,8 @@ sequenceDiagram
     Fetcher->>Cleaner: Send raw content
     Cleaner->>Cleaner: Extract readable text, headings, links, dates, checksums
     Cleaner->>AI: Send cleaned text + source metadata
-    AI->>AI: Summarize, classify, extract requirements and affected files
-    AI->>Validator: Return normalized update candidate
+    AI->>AI: Summarize, classify, extract requirements, affected files, and coding guidance
+    AI->>Validator: Return normalized update candidate with recommended action
     Validator->>Validator: Check required fields, source URL, confidence, dates
     Validator->>Elastic: Upsert validated policy_update record
     Validator->>Audit: Store crawl timestamp, source URL, checksum, result

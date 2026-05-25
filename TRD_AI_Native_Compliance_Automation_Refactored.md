@@ -79,8 +79,8 @@ sequenceDiagram
     Fetcher->>Cleaner: Send raw content
     Cleaner->>Cleaner: Extract readable text, headings, links, dates, checksums
     Cleaner->>AI: Send cleaned text + source metadata
-    AI->>AI: Summarize, classify, extract requirements and affected files
-    AI->>Validator: Return normalized update candidate
+    AI->>AI: Summarize, classify, extract requirements, affected files, and coding guidance
+    AI->>Validator: Return normalized update candidate with recommended action
     Validator->>Validator: Check required fields, source URL, confidence, dates
     Validator->>Elastic: Upsert validated policy_update record
     Validator->>Audit: Store crawl timestamp, source URL, checksum, result
@@ -242,7 +242,7 @@ secrets.
 | Trigger | Schedule, manual admin command, or deployment-time ingestion command. |
 | Source access | Curated official Google / Apple / Flutter URLs only. |
 | Elastic access | Write/upsert validated policy records. |
-| AI role | Summarize, classify, extract requirements, score relevance. |
+| AI role | Summarize, classify, extract requirements, define generic coding guidance, score relevance. |
 | Output | `platform_policy_updates` records and crawl audit logs. |
 
 ### 4.2 Elastic
@@ -251,7 +251,7 @@ secrets.
 |---|---|---|
 | Elastic Web Crawler or Open Crawler | Crawls/fetches platform policy docs from Google / Apple / Flutter. | Elastic docs describe web crawler as discovering, extracting, and indexing searchable web content. |
 | Elasticsearch Index | Stores cleaned platform policy documents and summaries. | Suggested index: `platform_policy_updates`. |
-| Elastic Agent Builder | Searches indexed docs and returns structured update descriptions. | AI may summarize, classify, extract requirements, and score relevance. It must not modify repos or create MRs. |
+| Elastic Agent Builder | Searches indexed docs and returns structured update descriptions. | AI may summarize, classify, extract requirements, define coding guidance, and score relevance. It must not modify repos or create MRs. |
 | Custom search / ES query tool | Finds latest relevant policy update by platform and date. | Could be semantic, keyword, or hybrid query. |
 | Enrichment pipeline | Normalizes crawled docs into `platform`, `requirement`, `affected_files`, `severity`, `source_url`. | Can be simple script for MVP. |
 | Elastic read/write API keys | Programmatic access to Elastic APIs / Agent Builder. | Keep read and write credentials split by agent role. |
