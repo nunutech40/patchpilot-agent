@@ -173,6 +173,11 @@ Platform Policy Docs
 See [`docs/policy-crawl-plan.md`](docs/policy-crawl-plan.md) for the curated
 official source list and extraction schema.
 
+See [`diagrams/sequence-policy-ingestion.md`](diagrams/sequence-policy-ingestion.md)
+for the background crawl/index flow and
+[`diagrams/sequence-elastic-context-to-coding-agent.md`](diagrams/sequence-elastic-context-to-coding-agent.md)
+for how Elastic records become an Antigravity coding task.
+
 ## Checklist
 
 - [ ] Create Elasticsearch deployment or Elastic Cloud project.
@@ -185,6 +190,7 @@ official source list and extraction schema.
 - [ ] Use AI only for summarization, classification, extraction, and relevance scoring.
 - [ ] Create query/tool in Elastic Agent Builder.
 - [ ] Return structured update description to OpenClaw.
+- [ ] Build coding-task payload with policy context, repo facts, expected changes, constraints, and validation commands.
 
 ## Example Structured Update Description
 

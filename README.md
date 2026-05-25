@@ -70,6 +70,7 @@ Start here:
 | [docs/policy-crawl-plan.md](docs/policy-crawl-plan.md) | Curated official sources to crawl and how Elastic should normalize policy context. |
 | [deploy/README.md](deploy/README.md) | Docker-first VPS deployment plan for PatchPilot. |
 | [diagrams/sequence-policy-ingestion.md](diagrams/sequence-policy-ingestion.md) | Background policy crawl/index flow, separate from repo checks. |
+| [diagrams/sequence-elastic-context-to-coding-agent.md](diagrams/sequence-elastic-context-to-coding-agent.md) | How indexed Elastic records become the Antigravity coding task payload. |
 | [diagrams/sequence-telegram-mvp.md](diagrams/sequence-telegram-mvp.md) | Telegram MVP sequence diagram with Antigravity as coding worker. |
 | [diagrams/sequence-ideal-mongodb.md](diagrams/sequence-ideal-mongodb.md) | Ideal MongoDB sequence diagram with Antigravity as coding worker. |
 | [.env.example](.env.example) | Local/runtime environment variable template. |

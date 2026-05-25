@@ -142,6 +142,82 @@ Elastic should store normalized records with fields like:
 }
 ```
 
+## Coding Task Context Payload
+
+When OpenClaw queries Elastic during `/check`, it should transform matching
+records into a coding-task payload for Antigravity. The payload should be
+specific enough that Antigravity can edit the repo without browsing random
+sources.
+
+```json
+{
+  "task_type": "native_compliance_update",
+  "repo_url": "https://gitlab.com/company/flutter-app",
+  "workspace_path": "/workspace/jobs/job-123/repo",
+  "platform": "android",
+  "policy_context": {
+    "title": "Google Play target API level requirement",
+    "summary": "New apps and updates must target Android 15 API level 35 or later.",
+    "source_urls": [
+      "https://developer.android.com/google/play/requirements/target-sdk"
+    ],
+    "effective_date": "2025-08-31",
+    "severity": "publishing_blocker",
+    "detected_requirement": "targetSdk >= 35",
+    "requirement_type": "target_sdk"
+  },
+  "repo_facts": {
+    "detected_files": [
+      "android/app/build.gradle",
+      "android/gradle/wrapper/gradle-wrapper.properties",
+      "pubspec.yaml"
+    ],
+    "current_values": {
+      "targetSdk": "33",
+      "compileSdk": "33",
+      "android_gradle_plugin": "7.4.2",
+      "gradle_wrapper": "7.5"
+    }
+  },
+  "expected_changes": [
+    {
+      "file": "android/app/build.gradle",
+      "change": "Update targetSdk and compileSdk if compatible."
+    },
+    {
+      "file": "android/gradle/wrapper/gradle-wrapper.properties",
+      "change": "Update Gradle wrapper only if required by Android Gradle Plugin compatibility."
+    }
+  ],
+  "constraints": [
+    "Edit only files inside workspace_path.",
+    "Prefer minimal native configuration changes.",
+    "Do not modify app business logic unless explicitly required.",
+    "Do not commit, push, or create the MR; OpenClaw handles GitLab operations.",
+    "Include validation status and changed file summary."
+  ],
+  "validation_commands": [
+    "flutter analyze",
+    "flutter test"
+  ]
+}
+```
+
+Required fields for Antigravity:
+
+- `workspace_path`: where the cloned repo is located.
+- `platform`: `android`, `ios`, or `flutter`.
+- `policy_context.summary`: plain-language reason for the change.
+- `policy_context.source_urls`: official references to cite in the MR.
+- `policy_context.detected_requirement`: concrete requirement, such as
+  `targetSdk >= 35` or `iOS SDK >= 26`.
+- `repo_facts.detected_files`: files that exist in the cloned repo.
+- `repo_facts.current_values`: current native config values detected by
+  OpenClaw before invoking Antigravity.
+- `expected_changes`: bounded file/change hints.
+- `constraints`: hard guardrails.
+- `validation_commands`: commands Antigravity may attempt if available.
+
 ## AI Responsibilities in the Context Layer
 
 The crawler itself should be deterministic: fetch selected official URLs,
