@@ -3,7 +3,14 @@
 This folder is the clean deployment profile for the hackathon PatchPilot bot.
 It must not be mixed with the company-detector/OpenClaw VPS.
 
-OpenClaw is the orchestration runtime. Antigravity CLI is the coding worker that
+OpenClaw is the platform runtime. It hosts two PatchPilot agents:
+
+- `patchpilot-runtime`: user-facing Runtime MR Agent for Telegram `/check`,
+  Elastic read queries, Antigravity execution, and GitLab MR creation.
+- `policy-context`: internal Policy Context Agent for scheduled/manual official
+  docs ingestion and Elastic upserts.
+
+Antigravity CLI is the coding worker invoked by the Runtime MR Agent. It
 inspects cloned GitLab repositories, edits files, and runs lightweight
 validation commands.
 
@@ -15,6 +22,7 @@ validation commands.
 - Dedicated Docker Compose project: `patchpilot`
 - Dedicated OpenClaw data volume: `patchpilot_openclaw`
 - Dedicated workspace volume: `patchpilot_workspace`
+- Dedicated OpenClaw agent definitions for `patchpilot-runtime` and `policy-context`
 - Dedicated Antigravity auth/config inside the PatchPilot container or volume
 - Optional dedicated policy ingestion worker for scheduled Elastic updates
 - Dedicated gateway port: `18889`
@@ -69,7 +77,8 @@ Required for MVP:
 - `TELEGRAM_BOT_TOKEN`
 - `GITLAB_TOKEN`
 - `ELASTICSEARCH_URL`
-- `ELASTICSEARCH_API_KEY`
+- `ELASTIC_READ_API_KEY`
+- `ELASTIC_WRITE_API_KEY`
 - `OPENCLAW_API_KEY` or the model-provider secret selected during OpenClaw setup
 - `ANTIGRAVITY_API_KEY` or the Antigravity auth method selected for the CLI
 
@@ -119,3 +128,5 @@ PatchPilot should use remote services for heavy work:
 - Do not expose ports `3001`, `3002`, or `18789` for PatchPilot.
 - Do not run PatchPilot from the company OpenClaw gateway.
 - Do not let Antigravity operate outside `/workspace` or the cloned target repo.
+- Do not give the Policy Context Agent a GitLab token.
+- Do not give the Runtime MR Agent Elastic write/upsert credentials.

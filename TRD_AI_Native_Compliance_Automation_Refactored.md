@@ -7,19 +7,51 @@
 
 ## 1. Technical summary
 
-The system uses OpenClaw as the orchestration platform and Telegram interface, Antigravity CLI as the coding worker, Elastic as the platform-policy context layer, and GitLab as the source-code and Merge Request system. The hackathon MVP avoids MongoDB by receiving repo URLs directly through Telegram and processing them as runtime input. The ideal mode adds MongoDB to persist repository lists by user account.
+The system uses one isolated OpenClaw runtime with two dedicated agents. The PatchPilot Runtime MR Agent is user-facing through Telegram and creates GitLab Merge Requests. The Policy Context Agent is internal/background and maintains Elastic policy context. Antigravity CLI is the coding worker invoked only by the Runtime MR Agent. Elastic is the platform-policy context layer, and GitLab is the source-code and Merge Request system. The hackathon MVP avoids MongoDB by receiving repo URLs directly through Telegram and processing them as runtime input. The ideal mode adds MongoDB to persist repository lists by user account.
 
 ## 2. Architecture principles
 
-1. **Elastic owns policy context.** Google / Apple / Flutter docs are crawled/fetched and indexed in Elasticsearch.
-2. **OpenClaw orchestrates the agent flow.** It receives messages, calls tools, queries Elastic, invokes Antigravity CLI, and creates the GitLab MR.
-3. **Antigravity CLI Coding Worker owns repository edits.** It reads repo files and generates code changes inside a cloned workspace; OpenClaw handles branch, commit, push, and MR creation.
-4. **GitLab owns source control and review.** Output is GitLab Merge Request, never direct merge.
-5. **Secrets stay outside source code.** All tokens and API keys are environment/runtime secrets.
+For a concise platform view, see
+[`docs/openclaw-platform-architecture.md`](docs/openclaw-platform-architecture.md).
+
+1. **One OpenClaw runtime, two agents.** Runtime MR Agent handles Telegram/repo/MR work; Policy Context Agent handles crawl/extract/index work.
+2. **Elastic owns policy context.** Google / Apple / Flutter docs are crawled/fetched by the Policy Context Agent and indexed in Elasticsearch.
+3. **Runtime MR Agent orchestrates repo remediation.** It receives Telegram messages, queries Elastic read-only, invokes Antigravity CLI, inspects the diff, and creates the GitLab MR.
+4. **Policy Context Agent maintains Elastic.** It fetches curated official sources, uses AI for extraction/classification, validates records, and upserts Elastic.
+5. **Antigravity CLI Coding Worker owns repository edits.** It reads repo files and generates code changes inside a cloned workspace; Runtime MR Agent handles branch, commit, push, and MR creation.
+6. **GitLab owns source control and review.** Output is GitLab Merge Request, never direct merge.
+7. **Secrets stay outside source code.** Tokens and API keys are split by agent role and stored as environment/runtime secrets.
 
 ## 3. Sequence diagrams
 
-### 3.0 Policy ingestion - scheduled crawl to Elastic
+### 3.0 OpenClaw platform architecture - two-agent runtime
+
+```txt
+OpenClaw Gateway
+├── Agent 1: PatchPilot Runtime MR Agent
+│   ├── Telegram channel
+│   ├── Elastic read/query tool
+│   ├── GitLab clone/API tools
+│   ├── Antigravity CLI exec wrapper
+│   └── GitLab MR notification flow
+│
+└── Agent 2: Policy Context Agent
+    ├── Scheduled/manual crawl trigger
+    ├── Curated source registry
+    ├── Policy fetcher / cleaner
+    ├── Extraction/classification AI
+    ├── Elastic write/upsert tool
+    └── Crawl audit log
+```
+
+Agent separation:
+
+| Agent | Trigger | Responsibilities | Allowed secrets/tools | Must not do |
+|---|---|---|---|---|
+| PatchPilot Runtime MR Agent | Telegram `/check`, future dashboard/API scan | Query Elastic, clone repo, build Antigravity payload, invoke Antigravity, inspect diff, create MR, notify Telegram | Telegram token, GitLab token, Elastic read key, Antigravity auth, workspace filesystem, git/exec | Crawl policy docs, write Elastic policy records |
+| Policy Context Agent | Schedule, manual admin trigger | Crawl official sources, clean text, extract/classify requirements, validate records, upsert Elastic, write audit logs | Elastic write key, curated source registry, web fetch/crawler, extraction model | Clone user repos, invoke Antigravity, create GitLab MRs |
+
+### 3.1 Policy ingestion - scheduled crawl to Elastic
 
 This flow is separate from Telegram `/check`. It crawls curated official
 Google / Apple / Flutter sources, uses AI only for extraction/classification,
@@ -60,7 +92,7 @@ sequenceDiagram
     end
 ```
 
-### 3.1 Ideal mode - with MongoDB repository persistence
+### 3.2 Ideal mode - with MongoDB repository persistence
 
 [Standalone diagram](diagrams/sequence-ideal-mongodb.md)
 
@@ -72,7 +104,7 @@ sequenceDiagram
         actor Reviewer as Human Reviewer
     end
     box AI Platform Area
-        participant OpenClaw as OpenClaw / AI Platform
+        participant OpenClaw as Runtime MR Agent
         participant Agent as Antigravity CLI Coding Worker
     end
     box Elastic Context Layer
@@ -114,7 +146,7 @@ sequenceDiagram
     end
 ```
 
-### 3.2 Hackathon MVP - Telegram input, no MongoDB
+### 3.3 Hackathon MVP - Telegram input, no MongoDB
 
 [Standalone diagram](diagrams/sequence-telegram-mvp.md)
 
@@ -129,7 +161,7 @@ sequenceDiagram
         participant Telegram as Telegram Bot
     end
     box AI Platform Area
-        participant OpenClaw as OpenClaw / AI Platform
+        participant OpenClaw as Runtime MR Agent
         participant Agent as Antigravity CLI Coding Worker
     end
     box Elastic Context Layer
@@ -172,20 +204,46 @@ sequenceDiagram
 
 ## 4. Technology inventory and responsibilities
 
-### 4.1 OpenClaw
+### 4.1 OpenClaw platform
+
+OpenClaw runs the PatchPilot platform as one isolated runtime with multiple agents.
+The agents share gateway infrastructure but do not share responsibilities or
+secrets.
 
 | Capability / tool | Function in this project | Notes |
 |---|---|---|
-| Telegram channel | Receives `/check` messages and sends MR link back to developer. | OpenClaw supports channels and identifies Telegram as a fast setup with bot token. |
-| Tools layer | Lets the agent invoke typed functions such as `exec`, `browser`, `web_search`, and `message`. | Used for shell commands, outbound message, search/fetch if enabled. |
-| Skills | Defines PatchPilot orchestration rules, diff boundaries, and how to call Antigravity CLI safely. | Create workspace skill: `patchpilot-orchestrator`. |
+| Agent registry | Defines `patchpilot-runtime` and `policy-context` agents. | Keep prompts, tools, schedules, and secrets scoped by agent. |
+| Telegram channel | Routes `/check` messages to Runtime MR Agent and sends MR link back to developer. | OpenClaw supports channels and identifies Telegram as a fast setup with bot token. |
+| Tools layer | Lets agents invoke typed functions such as `exec`, `web_fetch`, `message`, and custom Elastic/GitLab tools. | Runtime MR Agent and Policy Context Agent should receive different tool allowlists. |
+| Skills | Defines reusable workflows and guardrails. | Use `patchpilot-runtime-agent` and `policy-context-agent` skills. |
 | Plugins / bundles | Package channel integrations, model providers, MCP tools, hooks, or skills. | Useful if GitLab or Elastic integrations are packaged as plugins. |
 | Gateway | Runs OpenClaw as the message and agent runtime. | Required for Telegram bot routing. |
 | Message tool | Sends progress, no-action result, or MR link to Telegram. | Used for developer notification. |
-| Exec / terminal tool | Runs git, Antigravity CLI, validation commands, or helper scripts if enabled. | Should be gated or sandboxed. |
-| File read/edit/apply_patch pattern | Used mainly for orchestration files, generated prompts, and diff inspection. | Antigravity should own source edits in the cloned target repo. |
+| Exec / terminal tool | Runtime MR Agent runs git, Antigravity CLI, validation commands, or helper scripts if enabled. | Should be gated or sandboxed. Policy Context Agent should not get GitLab repo write tools. |
+| Web fetch/crawler tool | Policy Context Agent fetches curated official sources. | Runtime MR Agent should not crawl policy docs during `/check`. |
+| File read/edit/apply_patch pattern | Used mainly for orchestration files, generated prompts, diff inspection, and policy source registry files. | Antigravity should own source edits in the cloned target repo. |
 | Agent workspace | Temporary working directory for cloned GitLab repos. | Clean up after MR creation. |
 | Access control | Telegram allowlist, group allowlist, and activation/mention policy. | Prevent random users from triggering code changes. |
+
+### 4.1.1 Runtime MR Agent
+
+| Responsibility | Detail |
+|---|---|
+| Trigger | Telegram `/check` with one or more GitLab repo URLs. |
+| Elastic access | Read/query only. |
+| GitLab access | Clone/fetch repo, create branch, commit, push, create MR. |
+| Antigravity access | Invoke CLI inside cloned workspace only. |
+| Output | No-action Telegram response or GitLab MR link. |
+
+### 4.1.2 Policy Context Agent
+
+| Responsibility | Detail |
+|---|---|
+| Trigger | Schedule, manual admin command, or deployment-time ingestion command. |
+| Source access | Curated official Google / Apple / Flutter URLs only. |
+| Elastic access | Write/upsert validated policy records. |
+| AI role | Summarize, classify, extract requirements, score relevance. |
+| Output | `platform_policy_updates` records and crawl audit logs. |
 
 ### 4.2 Elastic
 
@@ -196,7 +254,7 @@ sequenceDiagram
 | Elastic Agent Builder | Searches indexed docs and returns structured update descriptions. | AI may summarize, classify, extract requirements, and score relevance. It must not modify repos or create MRs. |
 | Custom search / ES query tool | Finds latest relevant policy update by platform and date. | Could be semantic, keyword, or hybrid query. |
 | Enrichment pipeline | Normalizes crawled docs into `platform`, `requirement`, `affected_files`, `severity`, `source_url`. | Can be simple script for MVP. |
-| Elastic API key | Programmatic access to Elastic APIs / Agent Builder. | Keep in env secrets. |
+| Elastic read/write API keys | Programmatic access to Elastic APIs / Agent Builder. | Keep read and write credentials split by agent role. |
 
 ### 4.3 GitLab
 
@@ -339,7 +397,8 @@ Required env secrets:
 TELEGRAM_BOT_TOKEN=
 GITLAB_TOKEN=
 ELASTICSEARCH_URL=
-ELASTIC_API_KEY=
+ELASTIC_READ_API_KEY=
+ELASTIC_WRITE_API_KEY=
 ANTIGRAVITY_API_KEY=
 MONGODB_URI= # ideal mode only
 ```
@@ -353,20 +412,24 @@ Rules:
 - Use least-privilege GitLab token.
 - Restrict Telegram input via allowlist.
 - Keep Antigravity CLI auth/config scoped to the PatchPilot container/user.
+- Give Runtime MR Agent only Elastic read access.
+- Give Policy Context Agent only Elastic write/upsert access and no GitLab token.
 
 ## 9. Implementation plan
 
 ### Phase 1 - Telegram MVP
 
-1. Configure OpenClaw Telegram channel.
-2. Create `/check` command parsing skill.
-3. Configure Elastic crawler / fetcher for selected platform docs.
-4. Build Elastic index and Agent Builder query/tool.
-5. Install and authenticate Antigravity CLI in the PatchPilot runtime.
-6. Implement Antigravity task prompt generation for Flutter native compliance.
-7. Implement diff inspection and safety checks before commit.
-8. Implement GitLab read/branch/commit/MR operations.
-9. Send final MR link to Telegram.
+1. Configure one isolated OpenClaw runtime for PatchPilot.
+2. Create `policy-context` agent for scheduled/manual Elastic ingestion.
+3. Configure curated source registry and Elastic write/upsert flow.
+4. Create `patchpilot-runtime` agent for Telegram `/check`.
+5. Configure OpenClaw Telegram channel and `/check` command parsing skill.
+6. Build Elastic read query/tool for Runtime MR Agent.
+7. Install and authenticate Antigravity CLI in the PatchPilot runtime.
+8. Implement Antigravity task prompt generation for Flutter native compliance.
+9. Implement diff inspection and safety checks before commit.
+10. Implement GitLab read/branch/commit/MR operations.
+11. Send final MR link to Telegram.
 
 ### Phase 2 - Ideal account-based mode
 
@@ -381,8 +444,9 @@ Rules:
 | Test | Expected result |
 |---|---|
 | Telegram unauthorized user | Bot rejects or ignores request. |
+| Policy Context Agent scheduled crawl | Official docs are fetched, normalized, validated, and upserted into Elastic. |
 | Valid repo list, no relevant Elastic update | Bot returns no-MR-needed. |
-| Valid repo list, relevant Android update | Antigravity creates code diff; OpenClaw commits branch and creates GitLab MR. |
+| Valid repo list, relevant Android update | Antigravity creates code diff; Runtime MR Agent commits branch and creates GitLab MR. |
 | Invalid repo URL | Bot reports invalid input. |
 | Missing GitLab token | Tool fails safely without exposing secret. |
 | Elastic unavailable | Bot reports context provider unavailable. |
@@ -393,6 +457,7 @@ Rules:
 | Failure | Handling |
 |---|---|
 | Elastic index empty | Return “policy context unavailable” and do not modify repo. |
+| Policy crawl fails | Keep last valid Elastic records and write audit failure. |
 | GitLab repo inaccessible | Return error to Telegram. |
 | Antigravity cannot determine safe fix | Create no MR; return explanation. |
 | Antigravity CLI unavailable | Stop before modifying repo and report coding worker unavailable. |

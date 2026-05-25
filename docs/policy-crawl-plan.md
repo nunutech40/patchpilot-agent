@@ -1,8 +1,9 @@
 # Policy Crawl Plan
 
-PatchPilot uses Elastic as the platform-policy context layer. This is not a
-general web crawler. It should crawl a curated set of official sources that can
-produce actionable GitLab Merge Requests for Flutter repositories.
+PatchPilot uses Elastic as the platform-policy context layer. The Policy Context
+Agent inside OpenClaw maintains that layer. This is not a general web crawler.
+It should crawl a curated set of official sources that can produce actionable
+GitLab Merge Requests for Flutter repositories.
 
 This is a separate ingestion flow. It should run as a scheduled worker or manual
 admin job, not inline with every Telegram `/check` request.
@@ -10,7 +11,7 @@ admin job, not inline with every Telegram `/check` request.
 ## Goal
 
 Convert official mobile platform policy and release information into structured
-update records that OpenClaw can use to decide whether Antigravity CLI should
+update records that the Runtime MR Agent can use to decide whether Antigravity CLI should
 edit a Flutter repository.
 
 ## Source Priority
@@ -238,9 +239,10 @@ AI should not:
 - Modify GitLab repositories from the Elastic layer.
 - Commit or open Merge Requests.
 
-## OpenClaw Orchestrator Responsibilities
+## Runtime MR Agent Responsibilities
 
-OpenClaw is the runtime orchestrator for repository checks. It should:
+The PatchPilot Runtime MR Agent is the runtime orchestrator for repository
+checks. It should:
 
 - Receive Telegram input.
 - Query Elastic for already-indexed structured context.
@@ -251,8 +253,8 @@ OpenClaw is the runtime orchestrator for repository checks. It should:
 - Inspect the generated diff boundary.
 - Commit, push, create MR, and notify Telegram.
 
-Antigravity is the coding worker. Elastic is the context layer. OpenClaw is the
-orchestrator.
+Antigravity is the coding worker. Elastic is the context layer. The Policy
+Context Agent maintains Elastic. The Runtime MR Agent consumes Elastic.
 
 ## Runtime Boundary
 

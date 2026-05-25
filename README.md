@@ -2,7 +2,7 @@
 
 PatchPilot is an AI agent that turns mobile platform policy updates into GitLab Merge Requests for Flutter teams.
 
-The MVP flow is intentionally simple: a developer sends one or more GitLab Flutter repository URLs to a Telegram bot, PatchPilot checks indexed Google / Apple / Flutter policy context through Elastic, then Antigravity CLI acts as the coding worker that updates the repository and prepares a GitLab Merge Request for human review.
+The MVP flow is intentionally simple: a developer sends one or more GitLab Flutter repository URLs to a Telegram bot, the PatchPilot Runtime MR Agent checks indexed Google / Apple / Flutter policy context through Elastic, then Antigravity CLI acts as the coding worker that updates the repository and prepares a GitLab Merge Request for human review.
 
 PatchPilot never auto-merges code.
 
@@ -10,7 +10,9 @@ PatchPilot never auto-merges code.
 
 - Accepts GitLab repository URLs through Telegram.
 - Uses Elastic as the platform-policy context layer.
-- Lets OpenClaw orchestrate the agent workflow.
+- Uses one isolated OpenClaw runtime with two agents:
+  - PatchPilot Runtime MR Agent for Telegram `/check`, Antigravity, GitLab, and MR creation.
+  - Policy Context Agent for scheduled/manual crawl, extraction, and Elastic indexing.
 - Uses Antigravity CLI as the dedicated coding agent for repository inspection, edits, and validation.
 - Inspects Flutter native project files such as Android Gradle config, manifests, Podfiles, and iOS plist files.
 - Creates a branch, commits safe native-compliance changes, and opens a GitLab Merge Request.
@@ -21,7 +23,7 @@ PatchPilot never auto-merges code.
 ```txt
 Flutter Developer
   -> Telegram Bot
-  -> OpenClaw / AI Platform
+  -> OpenClaw Runtime MR Agent
   -> Elastic Context Layer
   -> Antigravity CLI Coding Worker
   -> GitLab Branch + Merge Request
@@ -34,7 +36,9 @@ The final output is a GitLab Merge Request reviewed by a human, not an automatic
 
 | Area | Tool |
 |---|---|
-| Agent orchestration | OpenClaw |
+| Agent platform | OpenClaw |
+| Runtime user-facing agent | PatchPilot Runtime MR Agent |
+| Background context agent | Policy Context Agent |
 | Coding worker | Antigravity CLI |
 | User input | Telegram Bot |
 | Policy context | Elastic / Elasticsearch |
@@ -67,6 +71,7 @@ Start here:
 | [BUILDING_PLAN.md](BUILDING_PLAN.md) | Step-by-step implementation plan, phases, checklist, and hackathon path. |
 | [PRD_AI_Native_Compliance_Automation_Refactored.md](PRD_AI_Native_Compliance_Automation_Refactored.md) | Product requirements, users, goals, flows, success metrics, and risks. |
 | [TRD_AI_Native_Compliance_Automation_Refactored.md](TRD_AI_Native_Compliance_Automation_Refactored.md) | Technical requirements, architecture, data models, command design, and integration details. |
+| [docs/openclaw-platform-architecture.md](docs/openclaw-platform-architecture.md) | Two-agent OpenClaw platform architecture, high-level flows, technology stack, and tool boundaries. |
 | [docs/policy-crawl-plan.md](docs/policy-crawl-plan.md) | Curated official sources to crawl and how Elastic should normalize policy context. |
 | [deploy/README.md](deploy/README.md) | Docker-first VPS deployment plan for PatchPilot. |
 | [diagrams/sequence-policy-ingestion.md](diagrams/sequence-policy-ingestion.md) | Background policy crawl/index flow, separate from repo checks. |
@@ -110,6 +115,7 @@ Do not deploy PatchPilot into an existing company OpenClaw runtime. Keep these s
 - Docker network
 - Docker volumes
 - OpenClaw gateway port
+- OpenClaw agent definitions and tool allowlists
 - Antigravity CLI auth/config
 - Telegram bot token
 - GitLab token
@@ -156,7 +162,8 @@ Required for MVP:
 TELEGRAM_BOT_TOKEN=
 GITLAB_TOKEN=
 ELASTICSEARCH_URL=
-ELASTICSEARCH_API_KEY=
+ELASTIC_READ_API_KEY=
+ELASTIC_WRITE_API_KEY=
 OPENCLAW_API_KEY=
 ANTIGRAVITY_API_KEY=
 ```
@@ -172,7 +179,9 @@ MONGODB_URI=
 - Human review is always required before merge.
 - Antigravity should make minimal code changes inside the cloned repository workspace only.
 - Elastic policy source URLs should be included in MR descriptions.
-- Secrets must stay in runtime environment variables.
+- Secrets must stay in runtime environment variables and be scoped by agent role.
+- Runtime MR Agent should have Elastic read access, GitLab access, Telegram access, and Antigravity access.
+- Policy Context Agent should have Elastic write/upsert access and no GitLab token.
 - PatchPilot should not run heavy Elasticsearch or Flutter builds on a small VPS.
 - GitLab CI should handle heavier validation when possible.
 
@@ -182,7 +191,8 @@ This repository currently contains planning docs and deployment preparation for 
 
 1. Build the Telegram `/check` command handler.
 2. Configure Elastic policy index and query flow.
-3. Implement the OpenClaw PatchPilot orchestrator skill.
-4. Integrate Antigravity CLI as the coding worker.
-5. Implement GitLab read, branch, commit, and MR creation.
-6. Deploy to a fresh VPS using the Docker-first plan.
+3. Implement the Policy Context Agent for scheduled/manual Elastic ingestion.
+4. Implement the Runtime MR Agent for Telegram `/check`.
+5. Integrate Antigravity CLI as the coding worker.
+6. Implement GitLab read, branch, commit, and MR creation.
+7. Deploy to a fresh VPS using the Docker-first plan.

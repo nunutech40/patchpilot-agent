@@ -7,7 +7,7 @@ has already populated Elastic.
 ```mermaid
 sequenceDiagram
     autonumber
-    participant OpenClaw as OpenClaw Orchestrator
+    participant OpenClaw as Runtime MR Agent
     participant Elastic as Elastic Index + Agent Builder
     participant GitLab as GitLab Repository
     participant Context as Context Builder

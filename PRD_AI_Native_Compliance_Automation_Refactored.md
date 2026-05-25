@@ -7,7 +7,7 @@
 
 ## 1. Product summary
 
-This product helps Flutter developers keep their Android and iOS native project configuration up to date with platform policy changes from Google, Apple, and Flutter. A developer submits one or more GitLab repository URLs. The system checks the latest indexed platform policy context in Elastic, then OpenClaw delegates repository edits to Antigravity CLI as the coding worker. OpenClaw/GitLab automation then commits the generated diff and creates a GitLab Merge Request.
+This product helps Flutter developers keep their Android and iOS native project configuration up to date with platform policy changes from Google, Apple, and Flutter. A developer submits one or more GitLab repository URLs. One isolated OpenClaw runtime hosts two agents: the Policy Context Agent keeps Elastic updated from official policy sources, and the PatchPilot Runtime MR Agent handles Telegram `/check`, queries Elastic, delegates repository edits to Antigravity CLI, commits the generated diff, and creates a GitLab Merge Request.
 
 The final output is not a raw report and not an automatic merge. The final output is a **GitLab Merge Request reviewed by a human**.
 
@@ -21,13 +21,13 @@ Flutter developers often discover native platform changes late: target SDK chang
 |---|---|
 | Flutter Developer | Submit repo list and receive MR when native policy changes require code updates. |
 | Tech Lead / Maintainer | Review generated MR before merge. |
-| Hackathon evaluator | See a clear Gemini/Antigravity coding-agent flow using OpenClaw, Elastic context, Telegram, and GitLab. |
+| Hackathon evaluator | See a clear two-agent OpenClaw flow using Elastic context, Antigravity, Telegram, and GitLab. |
 
 ## 4. Product goals
 
 1. Let a developer submit GitLab repository URLs through Telegram for the hackathon MVP.
-2. Use Elastic as the context layer for Google / Apple / Flutter policy docs.
-3. Run Antigravity CLI as the coding worker that inspects repo code and makes native-compliance changes.
+2. Use a Policy Context Agent to maintain Elastic context for Google / Apple / Flutter policy docs.
+3. Use a Runtime MR Agent to query Elastic, invoke Antigravity CLI, and create GitLab MRs.
 4. Create GitLab Merge Requests with explanation, affected files, and human-review requirement.
 5. Keep private credentials out of public source code.
 
@@ -55,7 +55,7 @@ sequenceDiagram
         actor Reviewer as Human Reviewer
     end
     box AI Platform Area
-        participant OpenClaw as OpenClaw / AI Platform
+        participant OpenClaw as Runtime MR Agent
         participant Agent as Antigravity CLI Coding Worker
     end
     box Elastic Context Layer
@@ -114,7 +114,7 @@ sequenceDiagram
         participant Telegram as Telegram Bot
     end
     box AI Platform Area
-        participant OpenClaw as OpenClaw / AI Platform
+        participant OpenClaw as Runtime MR Agent
         participant Agent as Antigravity CLI Coding Worker
     end
     box Elastic Context Layer
@@ -160,14 +160,14 @@ sequenceDiagram
 ### 7.1 Telegram MVP flow
 
 1. Flutter Developer sends `/check` command with GitLab repo URLs to Telegram Bot.
-2. OpenClaw receives the Telegram input and extracts repo URLs.
+2. Runtime MR Agent receives the Telegram input and extracts repo URLs.
 3. OpenClaw asks Elastic for relevant native platform updates from the already-indexed policy context.
 4. Elastic searches indexed Google / Apple / Flutter records and returns a structured update description.
 5. If no relevant update exists, OpenClaw replies in Telegram: `No Merge Request needed`.
 6. If an update is relevant, OpenClaw sends repo list and update description to Antigravity CLI Coding Worker.
 7. Antigravity CLI Coding Worker reads GitLab repository files and modifies code inside the cloned workspace.
-8. OpenClaw/GitLab automation reviews the diff boundary, creates a branch, commits, and opens GitLab MR.
-9. OpenClaw sends MR link back to the developer in Telegram.
+8. Runtime MR Agent/GitLab automation reviews the diff boundary, creates a branch, commits, and opens GitLab MR.
+9. Runtime MR Agent sends MR link back to the developer in Telegram.
 10. Human Reviewer reviews, approves, merges, or requests changes in GitLab.
 
 ### 7.2 Ideal account-based flow
@@ -176,7 +176,7 @@ sequenceDiagram
 2. OpenClaw saves repo list by user account to MongoDB.
 3. OpenClaw loads repos by user account when check starts.
 4. Elastic provides structured update context.
-5. Antigravity CLI Coding Worker edits repos, then OpenClaw/GitLab automation creates GitLab MRs.
+5. Antigravity CLI Coding Worker edits repos, then Runtime MR Agent/GitLab automation creates GitLab MRs.
 
 ## 8. Functional requirements
 
@@ -187,11 +187,11 @@ sequenceDiagram
 | FR-03 | Return no-MR-needed response when no relevant update is found. | Must |
 | FR-04 | Pass repo list and Elastic update description to Antigravity CLI Coding Worker. | Must |
 | FR-05 | Antigravity CLI Coding Worker reads repository files and identifies affected Flutter / Android / iOS files. | Must |
-| FR-06 | OpenClaw/GitLab automation creates branch, commits Antigravity-generated changes, and creates GitLab MR. | Must |
+| FR-06 | Runtime MR Agent/GitLab automation creates branch, commits Antigravity-generated changes, and creates GitLab MR. | Must |
 | FR-07 | MR description includes policy summary, affected files, code change summary, and human review note. | Must |
 | FR-08 | Telegram Bot sends final MR link to developer. | Must |
 | FR-09 | Store account-based repo list in MongoDB in ideal mode. | Should |
-| FR-10 | Do not expose Elastic API key, GitLab token, Telegram token, or MongoDB URI in public repo. | Must |
+| FR-10 | Do not expose Elastic read/write keys, GitLab token, Telegram token, or MongoDB URI in public repo. | Must |
 
 ## 9. User stories
 
@@ -225,7 +225,7 @@ Each generated MR should include:
 
 ## 12. Security requirements
 
-- Store `ELASTIC_API_KEY`, `GITLAB_TOKEN`, and `TELEGRAM_BOT_TOKEN` as environment secrets.
+- Store Elastic read/write keys, `GITLAB_TOKEN`, and `TELEGRAM_BOT_TOKEN` as environment secrets.
 - Store Antigravity authentication/configuration as runtime secrets or user-scoped CLI config.
 - Never commit `.env` with real values.
 - Use `.env.example` for documentation.
@@ -240,16 +240,18 @@ Each generated MR should include:
 | Elastic index has stale policy docs | Add crawl timestamp and show source URLs in MR. |
 | Antigravity modifies wrong files | Restrict the coding worker to the cloned repo workspace and review diff before commit. |
 | GitLab token leaks | Use environment secrets and never log token values. |
+| Policy Context Agent gets repo credentials | Keep GitLab token out of the policy-context agent environment. |
+| Runtime MR Agent writes Elastic records | Give runtime agent Elastic read-only credentials. |
 | Generated MR fails CI | Mark MR as draft or include validation status. |
 | Telegram command abused | Use Telegram allowlist / group allowlist. |
 
 ## 14. Acceptance criteria
 
 - Developer can send repo list via Telegram.
-- OpenClaw receives and processes the repo list.
+- Runtime MR Agent receives and processes the repo list.
 - Elastic returns structured policy update context from indexed docs.
 - Antigravity CLI Coding Worker creates code changes in a cloned workspace.
-- OpenClaw/GitLab automation commits the generated diff to a GitLab branch.
+- Runtime MR Agent/GitLab automation commits the generated diff to a GitLab branch.
 - GitLab Merge Request is created.
 - Developer receives MR link in Telegram.
 - Human Reviewer is the final decision-maker.

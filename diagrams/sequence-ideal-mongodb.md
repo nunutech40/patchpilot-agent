@@ -15,7 +15,7 @@ sequenceDiagram
         actor Reviewer as Human Reviewer
     end
     box Orchestration Area
-        participant OpenClaw as OpenClaw Orchestrator
+        participant OpenClaw as Runtime MR Agent
     end
     box Data Storage Area
         participant Mongo as MongoDB

@@ -18,7 +18,7 @@ sequenceDiagram
         participant Telegram as Telegram Bot
     end
     box Orchestration Area
-        participant OpenClaw as OpenClaw Orchestrator
+        participant OpenClaw as Runtime MR Agent
     end
     box Elastic Context Layer
         participant Elastic as Elastic Index + Agent Builder
