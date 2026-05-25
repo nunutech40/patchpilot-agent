@@ -38,7 +38,7 @@ patchpilot-agent
 
 # Product Goal
 
-Build an AI automation tool that receives a GitLab Flutter repository list from a Telegram Bot, checks latest native mobile platform updates through Elastic, lets an Antigravity CLI Coding Worker modify the repository, and creates a GitLab Merge Request for human review.
+Build an AI automation tool that receives a GitLab Flutter repository list from a Telegram Bot, checks latest native mobile platform updates through Elastic, lets an Antigravity CLI Coding Worker modify a cloned repository workspace, and creates a GitLab Merge Request for human review.
 
 The final output is **not an auto-merge**. The final output is a **GitLab Merge Request reviewed by a human**.
 
@@ -86,11 +86,11 @@ Goal: prepare the public GitHub repository safely.
 - [ ] Add `.gitignore`.
 - [ ] Add `.env.example`.
 - [ ] Make sure `.env` is ignored.
-- [ ] Add `docs/PRD.md`.
-- [ ] Add `docs/TRD.md`.
-- [ ] Add `docs/BUILDING_PLAN.md`.
-- [ ] Add `diagrams/sequence-telegram-mvp.md`.
-- [ ] Add `diagrams/sequence-ideal-mongodb.md`.
+- [x] Add `PRD_AI_Native_Compliance_Automation_Refactored.md`.
+- [x] Add `TRD_AI_Native_Compliance_Automation_Refactored.md`.
+- [x] Add `BUILDING_PLAN.md`.
+- [x] Add `diagrams/sequence-telegram-mvp.md`.
+- [x] Add `diagrams/sequence-ideal-mongodb.md`.
 - [ ] Add license file.
 
 ## Environment Variables
@@ -104,6 +104,8 @@ ELASTICSEARCH_URL=
 ELASTICSEARCH_API_KEY=
 OPENCLAW_API_KEY=
 ANTIGRAVITY_API_KEY=
+ANTIGRAVITY_MODEL=
+ANTIGRAVITY_CLI_PATH=antigravity
 ```
 
 Optional for the ideal version:
@@ -174,12 +176,12 @@ Platform Policy Docs
 
 ## Checklist
 
-- [ ] Create Elasticsearch deployment.
-- [ ] Create index: `platform_policy_docs`.
+- [ ] Create Elasticsearch deployment or Elastic Cloud project.
+- [ ] Create index: `platform_policy_updates`.
 - [ ] Configure Elastic Web Crawler or custom fetcher.
 - [ ] Add seed URLs for Google / Apple / Flutter docs.
 - [ ] Index cleaned policy documents.
-- [ ] Add fields: `source`, `platform`, `title`, `url`, `content`, `last_seen_at`.
+- [ ] Add fields: `source`, `platform`, `title`, `url`, `content`, `summary`, `affected_files`, `severity`, `last_crawled_at`.
 - [ ] Create query/tool in Elastic Agent Builder.
 - [ ] Return structured update description to OpenClaw.
 
@@ -234,6 +236,8 @@ OpenClaw should:
 - [ ] Add Elastic query step.
 - [ ] Add condition: no relevant update vs relevant update found.
 - [ ] Add GitLab clone/workspace preparation step.
+- [ ] Install/authenticate Antigravity CLI in the isolated PatchPilot runtime.
+- [ ] Generate Antigravity task prompt from Elastic update context.
 - [ ] Add Antigravity CLI Coding Worker task step.
 - [ ] Add diff inspection/safety boundary step.
 - [ ] Add Telegram notification step.
@@ -244,6 +248,7 @@ OpenClaw should:
 - [ ] OpenClaw can receive runtime repo input.
 - [ ] OpenClaw can query Elastic.
 - [ ] OpenClaw can trigger Antigravity CLI Coding Worker.
+- [ ] OpenClaw can stop safely if Antigravity CLI is unavailable.
 - [ ] OpenClaw can send status back to Telegram.
 
 ---
@@ -316,12 +321,12 @@ Goal: generate safe repository changes based on Elastic context.
 
 ## Checklist
 
-- [ ] Agent reads only the target repo.
-- [ ] Agent uses Elastic update description as policy context.
-- [ ] Agent does not browse random external sources.
-- [ ] Agent creates minimal code changes.
-- [ ] Agent avoids changing unrelated files.
-- [ ] Agent writes a concise change summary for the MR.
+- [ ] Antigravity reads only the cloned target repo.
+- [ ] Antigravity uses Elastic update description as policy context.
+- [ ] Antigravity does not browse random external sources.
+- [ ] Antigravity creates minimal code changes.
+- [ ] Antigravity avoids changing unrelated files.
+- [ ] Antigravity writes a concise change summary for the MR.
 - [ ] OpenClaw writes clear commit message.
 - [ ] OpenClaw writes MR description with:
   - [ ] What changed
@@ -409,7 +414,7 @@ A Flutter developer sends a GitLab repo URL to PatchPilot via Telegram.
 PatchPilot checks Elastic for latest Google / Apple / Flutter platform updates.
 Elastic returns a relevant Android/iOS update.
 PatchPilot runs Antigravity CLI Coding Worker.
-The agent updates the Flutter native config.
+Antigravity updates the Flutter native config in the cloned workspace.
 OpenClaw reviews the diff boundary and commits the branch.
 PatchPilot creates a GitLab Merge Request.
 Human reviewer reviews the MR.
@@ -490,8 +495,9 @@ MongoDB is useful when repo list needs to persist per user account.
 - [ ] Developer can send repo list through Telegram.
 - [ ] OpenClaw receives repo list.
 - [ ] Elastic returns structured platform update context.
-- [ ] Antigravity CLI Coding Worker reads GitLab repo.
-- [ ] Antigravity CLI Coding Worker creates code changes.
+- [ ] OpenClaw clones or fetches the GitLab repo into an isolated workspace.
+- [ ] Antigravity CLI Coding Worker reads the cloned GitLab repo workspace.
+- [ ] Antigravity CLI Coding Worker creates code changes in the cloned workspace.
 - [ ] OpenClaw inspects generated diff before commit.
 - [ ] GitLab branch is created.
 - [ ] GitLab Merge Request is created.
