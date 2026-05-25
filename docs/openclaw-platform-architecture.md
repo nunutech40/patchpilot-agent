@@ -1,8 +1,13 @@
-# OpenClaw Platform Architecture
+# OpenClaw Fallback Architecture
 
-PatchPilot runs inside one isolated OpenClaw runtime with two dedicated agents.
-The split keeps user-facing GitLab automation separate from policy-context
-maintenance.
+This document is retained for local fallback/prototype planning only. The
+primary hackathon architecture is now Google Cloud Agent Builder / Gemini
+Enterprise Agent Platform. See
+[`docs/google-cloud-agent-platform-architecture.md`](google-cloud-agent-platform-architecture.md).
+
+If a local fallback is needed, PatchPilot can still run inside one isolated
+OpenClaw runtime with two dedicated agents. The split keeps user-facing GitLab
+automation separate from policy-context maintenance.
 
 ## Agent Topology
 
@@ -57,13 +62,13 @@ Telegram /check
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| Agent platform | OpenClaw Gateway | Hosts `patchpilot-runtime` and `policy-context` agents. |
+| Agent platform | OpenClaw Gateway | Local fallback that hosts `patchpilot-runtime` and `policy-context` agents. |
 | User channel | OpenClaw Telegram channel | Receives `/check` and sends result messages. |
 | Coding worker | Antigravity CLI | Edits cloned Flutter repos using structured policy context. |
 | Policy search | Elasticsearch / Elastic Agent Builder | Stores and retrieves normalized policy updates. |
 | Source control | GitLab API or Git CLI | Clone repo, create branch, commit diff, create MR. |
 | Policy ingestion | Web crawler/fetcher | Fetches curated official Google / Apple / Flutter sources. |
-| AI extraction | Model provider through OpenClaw/Elastic flow | Summarizes, classifies, extracts requirements, affected files, and generic coding guidance. |
+| AI extraction | Model provider through local fallback or Elastic flow | Summarizes, classifies, extracts requirements, affected files, and generic coding guidance. |
 | Optional persistence | MongoDB | Stores repo lists in ideal account-based mode. |
 | Runtime isolation | Docker Compose | Runs PatchPilot separately from company systems. |
 

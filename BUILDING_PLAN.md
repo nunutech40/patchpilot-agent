@@ -38,7 +38,12 @@ patchpilot-agent
 
 # Product Goal
 
-Build an AI automation tool that receives a GitLab Flutter repository list from a Telegram Bot, checks latest native mobile platform updates through Elastic, lets an Antigravity CLI Coding Worker modify a cloned repository workspace, and creates a GitLab Merge Request for human review.
+Build an AI automation tool for the Google Cloud Rapid Agent Hackathon. The
+tool receives a GitLab Flutter repository list from a Telegram Bot, checks
+latest native mobile platform updates through Elastic, uses Google Cloud Agent
+Builder / Gemini Enterprise Agent Platform for agent orchestration, lets an
+Antigravity CLI Coding Worker modify a cloned repository workspace through a
+Cloud Run tool backend, and creates a GitLab Merge Request for human review.
 
 The final output is **not an auto-merge**. The final output is a **GitLab Merge Request reviewed by a human**.
 
@@ -51,12 +56,12 @@ Flutter Developer
   ↓ sends repo list
 Telegram Bot
   ↓ forwards runtime input
-Agent 1: patchpilot-runtime / Runtime MR Agent
+Google Cloud Agent Builder / Agent 1: patchpilot-runtime
   ↓ queries already-indexed platform update context
 Elastic Context Layer
   ↓ returns structured policy update
 
-Agent 1: patchpilot-runtime / Runtime MR Agent
+Cloud Run Tool Backend
   ↓ gives repo list + Elastic context
 Antigravity CLI Coding Worker
   ↓ reads repo and edits code in cloned workspace
@@ -71,12 +76,13 @@ Human Reviewer
 
 ---
 
-# OpenClaw Agent Ownership
+# Google Cloud Agent Ownership
 
 | Area | Agent 1: `patchpilot-runtime` | Agent 2: `policy-context` |
 |---|---|---|
 | Primary trigger | Telegram `/check` | Schedule or manual admin ingestion |
 | Main job | Turn repo input + Elastic policy context into GitLab MR | Keep Elastic updated with official platform policy records |
+| Google Cloud component | Agent Builder / Gemini Enterprise Agent Platform + Cloud Run tool backend | Cloud Scheduler + Cloud Run ingestion backend or Agent Runtime job |
 | Elastic access | Read/query only | Write/upsert only |
 | GitLab access | Clone/fetch, branch, commit, create MR | None |
 | Antigravity access | Invoke CLI inside cloned workspace | None |
@@ -86,6 +92,9 @@ Human Reviewer
 
 The agents share context only through Elastic. Agent 2 prepares reusable policy
 records. Agent 1 consumes those records and combines them with actual repo facts.
+
+OpenClaw is no longer the primary hackathon runtime. It remains only as a
+fallback/local prototype path.
 
 ---
 
@@ -114,15 +123,19 @@ Never commit real keys.
 ```env
 TELEGRAM_BOT_TOKEN=
 GITLAB_TOKEN=
+GOOGLE_CLOUD_PROJECT=
+GOOGLE_CLOUD_LOCATION=
+AGENT_BUILDER_AGENT_ID=
+AGENT_BUILDER_DATA_STORE_ID=
+CLOUD_RUN_RUNTIME_URL=
+CLOUD_RUN_POLICY_INGESTION_URL=
+SECRET_MANAGER_PREFIX=
 ELASTICSEARCH_URL=
 ELASTIC_READ_API_KEY=
 ELASTIC_WRITE_API_KEY=
-OPENCLAW_API_KEY=
 ANTIGRAVITY_API_KEY=
 ANTIGRAVITY_MODEL=
 ANTIGRAVITY_CLI_PATH=antigravity
-PATCHPILOT_RUNTIME_AGENT_ID=patchpilot-runtime
-POLICY_CONTEXT_AGENT_ID=policy-context
 ```
 
 Optional for the ideal version:
@@ -203,7 +216,7 @@ for how Elastic records become an Antigravity coding task.
 
 ## Checklist
 
-- [ ] Create OpenClaw `policy-context` agent.
+- [ ] Create Agent 2 `policy-context` as Cloud Run ingestion backend, Agent Runtime job, or Agent Builder-backed workflow.
 - [ ] Give `policy-context` only crawler/fetcher, AI extraction, Elastic write/upsert, and audit-log tools.
 - [ ] Block `policy-context` from GitLab token, repo clone, Antigravity CLI, and MR creation tools.
 - [ ] Create Elasticsearch deployment or Elastic Cloud project.
@@ -259,7 +272,9 @@ for how Elastic records become an Antigravity coding task.
 
 # Phase 3 — Runtime MR Agent Workflow
 
-Goal: Agent 1, `patchpilot-runtime`, orchestrates the flow from Telegram input to Antigravity CLI Coding Worker execution.
+Goal: Agent 1, `patchpilot-runtime`, orchestrates the flow from Telegram input
+to Antigravity CLI Coding Worker execution using Google Cloud Agent Builder /
+Gemini Enterprise Agent Platform and a Cloud Run tool backend.
 
 ## Responsibilities
 
@@ -275,8 +290,10 @@ Agent 1 should:
 
 ## Checklist
 
-- [ ] Create OpenClaw workflow/session for Agent 1, `patchpilot-runtime`.
-- [ ] Create OpenClaw `patchpilot-runtime` agent.
+- [ ] Create Agent Builder / Gemini Enterprise Agent Platform agent for Agent 1, `patchpilot-runtime`.
+- [ ] Create Cloud Run tool backend for Telegram webhook, GitLab operations, Elastic read query, and Antigravity execution.
+- [ ] Configure Agent Builder Extensions or custom tool APIs that call the Cloud Run backend.
+- [ ] Store secrets in Secret Manager.
 - [ ] Give `patchpilot-runtime` Telegram, Elastic read, GitLab, workspace filesystem, git/exec, and Antigravity CLI tools.
 - [ ] Block `patchpilot-runtime` from Elastic write/upsert and policy crawling tools.
 - [ ] Add Telegram input handler.
@@ -297,6 +314,24 @@ Agent 1 should:
 - [ ] Runtime MR Agent can trigger Antigravity CLI Coding Worker.
 - [ ] Runtime MR Agent can stop safely if Antigravity CLI is unavailable.
 - [ ] Runtime MR Agent can send status back to Telegram.
+
+---
+
+# Phase 3.5 — Google Cloud Hackathon Alignment
+
+Goal: explicitly satisfy the Google Cloud Rapid Agent Hackathon resource path.
+
+See [`docs/google-cloud-hackathon-resources.md`](docs/google-cloud-hackathon-resources.md).
+
+## Checklist
+
+- [ ] Use Google Cloud Agent Builder / Gemini Enterprise Agent Platform as the primary agent platform.
+- [ ] Use Agent Builder Extensions or custom tool APIs for action mechanisms.
+- [ ] Use Elastic as the partner knowledge/context layer.
+- [ ] Use Cloud Run for custom backend/tool execution.
+- [ ] Use Secret Manager for GitLab, Telegram, Elastic, and Antigravity credentials.
+- [ ] Use Gemini or Agent Runtime for policy extraction/classification where needed.
+- [ ] Keep OpenClaw documented only as a local fallback/prototype.
 
 ---
 
@@ -513,9 +548,9 @@ MongoDB is useful when repo list needs to persist per user account.
 
 ## Day 2
 
-- [ ] Build OpenClaw flow.
-- [ ] Connect Telegram → OpenClaw.
-- [ ] Connect OpenClaw → Elastic.
+- [ ] Build Agent Builder / Gemini Enterprise Agent Platform flow.
+- [ ] Connect Telegram → Cloud Run webhook → Agent 1.
+- [ ] Connect Agent 1 → Cloud Run tool backend → Elastic.
 - [ ] Verify Agent 1 can only read Elastic and cannot crawl policy docs.
 - [ ] Verify Agent 2 can write Elastic and cannot access GitLab or Antigravity.
 
@@ -583,7 +618,7 @@ MongoDB is useful when repo list needs to persist per user account.
 - [ ] Use least-privilege GitLab token.
 - [ ] Do not expose secrets in MR description.
 - [ ] Do not send secrets to Telegram.
-- [ ] Do not log secrets in OpenClaw.
+- [ ] Do not log secrets in Agent Builder, Cloud Run, or fallback OpenClaw.
 
 ---
 

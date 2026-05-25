@@ -1,7 +1,8 @@
 # Policy Crawl Plan
 
 PatchPilot uses Elastic as the platform-policy context layer. The Policy Context
-Agent inside OpenClaw maintains that layer. This is not a general web crawler.
+Agent/service on Google Cloud maintains that layer through Cloud Run, Agent
+Runtime, or Agent Builder-backed ingestion. This is not a general web crawler.
 It should crawl a curated set of official sources that can produce actionable
 GitLab Merge Requests for Flutter repositories.
 
@@ -219,7 +220,7 @@ the Runtime MR Agent adds repository facts and creates the concrete task.
     "Edit only files inside workspace_path.",
     "Prefer minimal native configuration changes.",
     "Do not modify app business logic unless explicitly required.",
-    "Do not commit, push, or create the MR; OpenClaw handles GitLab operations.",
+    "Do not commit, push, or create the MR; the Runtime MR Agent / Cloud Run backend handles GitLab operations.",
     "Include validation status and changed file summary."
   ],
   "validation_commands": [
@@ -243,7 +244,7 @@ Required fields for Antigravity:
   do-not-change rules from the Policy Context Agent.
 - `repo_facts.detected_files`: files that exist in the cloned repo.
 - `repo_facts.current_values`: current native config values detected by
-  OpenClaw before invoking Antigravity.
+  the Runtime MR Agent / Cloud Run backend before invoking Antigravity.
 - `expected_changes`: bounded file/change hints.
 - `constraints`: hard guardrails.
 - `validation_commands`: commands Antigravity may attempt if available.
@@ -260,7 +261,7 @@ AI can be used after fetch to:
 - Extract dates, API levels, SDK versions, tool versions, and affected files.
 - Decide whether the update is actionable for a Flutter repo.
 - Define generic coding guidance, likely actions, and do-not-change boundaries.
-- Produce a structured update description for OpenClaw.
+- Produce a structured update description for the Runtime MR Agent.
 
 AI should not:
 

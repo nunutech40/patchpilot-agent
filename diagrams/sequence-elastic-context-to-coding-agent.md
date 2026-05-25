@@ -14,6 +14,7 @@ sequenceDiagram
     participant Policy as Agent 2: policy-context
     participant Elastic as Elastic Index + Agent Builder
     participant Runtime as Agent 1: patchpilot-runtime
+    participant Backend as Cloud Run Tool Backend
     participant GitLab as GitLab Repository
     participant Context as Context Builder
     participant Antigravity as Antigravity CLI Coding Worker
@@ -21,16 +22,17 @@ sequenceDiagram
     Note over Policy,Elastic: Earlier background ingestion flow
     Policy->>Elastic: Upsert policy_update with requirement, affected files, source URLs, recommended action
 
-    Runtime->>Elastic: Query by repo platform, current date, severity, and source freshness
+    Runtime->>Backend: Request policy context for repo facts
+    Backend->>Elastic: Query by repo platform, current date, severity, and source freshness
     Elastic->>Elastic: Retrieve matching policy_update records
-    Elastic->>Runtime: Return generic policy context and coding guidance
-    Runtime->>GitLab: Clone/fetch repo into isolated workspace
-    Runtime->>GitLab: Inspect target files and detect current native config
-    Runtime->>Context: Combine policy context + repo facts
+    Elastic->>Backend: Return generic policy context and coding guidance
+    Backend->>GitLab: Clone/fetch repo into isolated workspace
+    Backend->>GitLab: Inspect target files and detect current native config
+    Backend->>Context: Combine policy context + repo facts
     Context->>Context: Build concrete Antigravity task prompt and guardrails
     Context->>Antigravity: Send workspace path + coding task payload
     Antigravity->>Antigravity: Plan minimal native-compliance edits
     Antigravity->>GitLab: Edit cloned workspace files only
-    Antigravity->>Runtime: Return changed files, summary, validation status
-    Runtime->>Runtime: Inspect diff boundary before commit
+    Antigravity->>Backend: Return changed files, summary, validation status
+    Backend->>Backend: Inspect diff boundary before commit
 ```

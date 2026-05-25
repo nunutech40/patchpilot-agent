@@ -18,7 +18,8 @@ sequenceDiagram
         participant Telegram as Telegram Bot
     end
     box Orchestration Area
-        participant OpenClaw as Agent 1: patchpilot-runtime
+        participant AgentBuilder as Agent Builder: patchpilot-runtime
+        participant Backend as Cloud Run Tool Backend
     end
     box Elastic Context Layer
         participant Elastic as Elastic Index + Agent Builder
@@ -31,34 +32,35 @@ sequenceDiagram
         participant MR as GitLab Merge Request
     end
     box Secret / Runtime Config
-        participant Secrets as Env Secrets
+        participant Secrets as Secret Manager
     end
 
     Dev->>Repo: Maintains Flutter repository
     Dev->>Telegram: Send /check with GitLab repo URLs
-    Telegram->>OpenClaw: Forward repo list as runtime input
-    OpenClaw->>Secrets: Read Telegram / Elastic / GitLab / Antigravity config
+    Telegram->>Backend: Forward repo list as runtime input
+    Backend->>AgentBuilder: Invoke Agent 1 with repo list
+    Backend->>Secrets: Read Telegram / Elastic / GitLab / Antigravity config
 
-    OpenClaw->>Elastic: Query indexed policy updates for relevant native changes
-    Elastic->>OpenClaw: Return structured update description
+    Backend->>Elastic: Query indexed policy updates for relevant native changes
+    Elastic->>Backend: Return structured update description
 
     alt No relevant update
-        OpenClaw->>Telegram: Send no-MR-needed result
+        Backend->>Telegram: Send no-MR-needed result
         Telegram->>Dev: Notify no relevant update found
     else Relevant update found
-        OpenClaw->>Repo: Clone/fetch target repo into isolated workspace
-        OpenClaw->>Antigravity: Send workspace path + Elastic context + repo facts
+        Backend->>Repo: Clone/fetch target repo into isolated workspace
+        Backend->>Antigravity: Send workspace path + Elastic context + repo facts
         loop Until code diff is ready
             Antigravity->>Repo: Read repository files in cloned workspace
             Antigravity->>Antigravity: Analyze affected Flutter / Android / iOS code
             Antigravity->>Repo: Generate minimal native-compliance changes
             Antigravity->>Antigravity: Run lightweight validation if available
         end
-        Antigravity->>OpenClaw: Report changed files and validation status
-        OpenClaw->>OpenClaw: Inspect diff boundary and prepare MR description
-        OpenClaw->>Repo: Create branch and commit generated diff
-        OpenClaw->>MR: Create GitLab Merge Request
-        OpenClaw->>Telegram: Send MR link to developer
+        Antigravity->>Backend: Report changed files and validation status
+        Backend->>Backend: Inspect diff boundary and prepare MR description
+        Backend->>Repo: Create branch and commit generated diff
+        Backend->>MR: Create GitLab Merge Request
+        Backend->>Telegram: Send MR link to developer
         Telegram->>Dev: Notify GitLab MR is ready
         MR->>Reviewer: Request human review
         Reviewer->>MR: Approve, merge, or request changes

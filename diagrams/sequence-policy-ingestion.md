@@ -8,8 +8,9 @@ time a developer sends `/check`.
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Admin as Admin / Scheduler
+    actor Admin as Admin / Cloud Scheduler
     participant Ingest as Agent 2: policy-context
+    participant Backend as Cloud Run Ingestion Backend
     participant Registry as Curated Source Registry
     participant Fetcher as Policy Fetcher
     participant Docs as Official Policy Sources
@@ -20,7 +21,8 @@ sequenceDiagram
     participant Audit as Crawl Audit Log
 
     Admin->>Ingest: Trigger scheduled or manual crawl
-    Admin->>Registry: Load curated Google / Apple / Flutter source list
+    Ingest->>Backend: Start ingestion job
+    Backend->>Registry: Load curated Google / Apple / Flutter source list
     Registry->>Fetcher: Send source URL, platform, source type, crawl priority
     Fetcher->>Docs: Fetch official policy / release / changelog page
     Docs->>Fetcher: Return HTML, metadata, and last-modified hints
