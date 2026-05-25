@@ -23,7 +23,7 @@ PatchPilot never auto-merges code.
 ```txt
 Flutter Developer
   -> Telegram Bot
-  -> OpenClaw Runtime MR Agent
+  -> Agent 1: patchpilot-runtime / Runtime MR Agent
   -> Elastic Context Layer
   -> Antigravity CLI Coding Worker
   -> GitLab Branch + Merge Request
@@ -31,6 +31,18 @@ Flutter Developer
 ```
 
 The final output is a GitLab Merge Request reviewed by a human, not an automatic merge.
+
+## Two-Agent Split
+
+| Agent | ID | Owns | Must Not Do |
+|---|---|---|---|
+| Agent 1 | `patchpilot-runtime` | Telegram `/check`, Elastic read/query, GitLab workspace/branch/commit/MR, Antigravity CLI invocation, Telegram result | Crawl policy docs, write Elastic policy records |
+| Agent 2 | `policy-context` | Scheduled/manual policy crawl, curated Google / Apple / Flutter source fetch, AI extraction, coding guidance definition, Elastic write/upsert, crawl audit | Clone user repos, use GitLab token, invoke Antigravity, create MRs |
+
+Elastic is the handoff point. Agent 2 writes normalized policy records and
+generic coding guidance into Elastic. Agent 1 reads those records during
+`/check`, adds repo-specific facts, and sends a concrete coding task to
+Antigravity.
 
 ## Main Stack
 
@@ -191,8 +203,8 @@ This repository currently contains planning docs and deployment preparation for 
 
 1. Build the Telegram `/check` command handler.
 2. Configure Elastic policy index and query flow.
-3. Implement the Policy Context Agent for scheduled/manual Elastic ingestion.
-4. Implement the Runtime MR Agent for Telegram `/check`.
+3. Implement Agent 2, `policy-context`, for scheduled/manual Elastic ingestion.
+4. Implement Agent 1, `patchpilot-runtime`, for Telegram `/check`.
 5. Integrate Antigravity CLI as the coding worker.
 6. Implement GitLab read, branch, commit, and MR creation.
 7. Deploy to a fresh VPS using the Docker-first plan.

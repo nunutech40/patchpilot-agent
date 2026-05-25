@@ -104,7 +104,7 @@ sequenceDiagram
         actor Reviewer as Human Reviewer
     end
     box AI Platform Area
-        participant OpenClaw as Runtime MR Agent
+        participant OpenClaw as Agent 1: patchpilot-runtime
         participant Agent as Antigravity CLI Coding Worker
     end
     box Elastic Context Layer
@@ -133,9 +133,10 @@ sequenceDiagram
     alt No relevant update
         OpenClaw->>Dev: No Merge Request needed
     else Relevant update found
-        OpenClaw->>Agent: Send repo list + Elastic update description
+        OpenClaw->>Repo: Clone/fetch target repo into isolated workspace
+        OpenClaw->>Agent: Send workspace path + Elastic context + repo facts
         loop Until code diff is ready
-            Agent->>Repo: Read repository files
+            Agent->>Repo: Read repository files in cloned workspace
             Agent->>Agent: Analyze affected Flutter / Android / iOS code
             Agent->>Agent: Generate code changes
         end
@@ -161,7 +162,7 @@ sequenceDiagram
         participant Telegram as Telegram Bot
     end
     box AI Platform Area
-        participant OpenClaw as Runtime MR Agent
+        participant OpenClaw as Agent 1: patchpilot-runtime
         participant Agent as Antigravity CLI Coding Worker
     end
     box Elastic Context Layer
@@ -187,9 +188,10 @@ sequenceDiagram
         OpenClaw->>Telegram: Send "No Merge Request needed"
         Telegram->>Dev: Notify no relevant update found
     else Relevant update found
-        OpenClaw->>Agent: Send repo list + Elastic update description
+        OpenClaw->>Repo: Clone/fetch target repo into isolated workspace
+        OpenClaw->>Agent: Send workspace path + Elastic context + repo facts
         loop Until code diff is ready
-            Agent->>Repo: Read repository files
+            Agent->>Repo: Read repository files in cloned workspace
             Agent->>Agent: Analyze affected Flutter / Android / iOS code
             Agent->>Agent: Generate code changes
         end
@@ -313,6 +315,12 @@ secrets.
   "summary": "Short normalized update description",
   "detected_requirement": "targetSdk update required",
   "affected_files": ["android/app/build.gradle", "ios/Info.plist"],
+  "recommended_action": "Inspect the affected native config and update only when compatibility is clear.",
+  "coding_guidance": {
+    "goal": "Bring the native project config into compliance with the policy requirement.",
+    "likely_actions": ["Inspect current SDK/tool values", "Update native config if safe"],
+    "do_not_change": ["Do not modify app business logic"]
+  },
   "severity": "info | warning | publishing_blocker",
   "last_crawled_at": "2026-05-23T00:00:00Z"
 }

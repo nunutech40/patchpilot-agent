@@ -38,6 +38,17 @@ Flutter developers often discover native platform changes late: target SDK chang
 - No broad crawling of the entire web; use selected platform-policy seed URLs.
 - No MongoDB in the Telegram MVP flow.
 - No direct user-facing raw code patch as the final deliverable.
+- No mixing of policy ingestion and runtime GitLab remediation inside one agent.
+
+## 5.1 Two-agent ownership
+
+| Agent | ID | Product responsibility |
+|---|---|---|
+| Agent 1 | `patchpilot-runtime` | User-facing Telegram `/check`, Elastic read/query, GitLab clone/branch/commit/MR, Antigravity invocation, final Telegram result. |
+| Agent 2 | `policy-context` | Background/manual policy crawl, AI extraction/classification, generic coding guidance definition, Elastic write/upsert, crawl audit. |
+
+Agent 2 prepares policy context before repo checks. Agent 1 consumes that
+context during `/check` and never crawls policy docs in the user request path.
 
 ## 6. Two product modes
 
@@ -55,7 +66,7 @@ sequenceDiagram
         actor Reviewer as Human Reviewer
     end
     box AI Platform Area
-        participant OpenClaw as Runtime MR Agent
+        participant OpenClaw as Agent 1: patchpilot-runtime
         participant Agent as Antigravity CLI Coding Worker
     end
     box Elastic Context Layer
@@ -84,9 +95,10 @@ sequenceDiagram
     alt No relevant update
         OpenClaw->>Dev: No Merge Request needed
     else Relevant update found
-        OpenClaw->>Agent: Send repo list + Elastic update description
+        OpenClaw->>Repo: Clone/fetch target repo into isolated workspace
+        OpenClaw->>Agent: Send workspace path + Elastic context + repo facts
         loop Until code diff is ready
-            Agent->>Repo: Read repository files
+            Agent->>Repo: Read repository files in cloned workspace
             Agent->>Agent: Analyze affected Flutter / Android / iOS code
             Agent->>Agent: Generate code changes
         end
@@ -114,7 +126,7 @@ sequenceDiagram
         participant Telegram as Telegram Bot
     end
     box AI Platform Area
-        participant OpenClaw as Runtime MR Agent
+        participant OpenClaw as Agent 1: patchpilot-runtime
         participant Agent as Antigravity CLI Coding Worker
     end
     box Elastic Context Layer
@@ -140,9 +152,10 @@ sequenceDiagram
         OpenClaw->>Telegram: Send "No Merge Request needed"
         Telegram->>Dev: Notify no relevant update found
     else Relevant update found
-        OpenClaw->>Agent: Send repo list + Elastic update description
+        OpenClaw->>Repo: Clone/fetch target repo into isolated workspace
+        OpenClaw->>Agent: Send workspace path + Elastic context + repo facts
         loop Until code diff is ready
-            Agent->>Repo: Read repository files
+            Agent->>Repo: Read repository files in cloned workspace
             Agent->>Agent: Analyze affected Flutter / Android / iOS code
             Agent->>Agent: Generate code changes
         end
@@ -160,14 +173,14 @@ sequenceDiagram
 ### 7.1 Telegram MVP flow
 
 1. Flutter Developer sends `/check` command with GitLab repo URLs to Telegram Bot.
-2. Runtime MR Agent receives the Telegram input and extracts repo URLs.
-3. OpenClaw asks Elastic for relevant native platform updates from the already-indexed policy context.
+2. Agent 1, `patchpilot-runtime`, receives the Telegram input and extracts repo URLs.
+3. Agent 1 asks Elastic for relevant native platform updates from the already-indexed policy context.
 4. Elastic searches indexed Google / Apple / Flutter records and returns a structured update description.
-5. If no relevant update exists, OpenClaw replies in Telegram: `No Merge Request needed`.
-6. If an update is relevant, OpenClaw sends repo list and update description to Antigravity CLI Coding Worker.
+5. If no relevant update exists, Agent 1 replies in Telegram: `No Merge Request needed`.
+6. If an update is relevant, Agent 1 clones the repo and sends workspace path, Elastic context, and repo facts to Antigravity CLI Coding Worker.
 7. Antigravity CLI Coding Worker reads GitLab repository files and modifies code inside the cloned workspace.
-8. Runtime MR Agent/GitLab automation reviews the diff boundary, creates a branch, commits, and opens GitLab MR.
-9. Runtime MR Agent sends MR link back to the developer in Telegram.
+8. Agent 1/GitLab automation reviews the diff boundary, creates a branch, commits, and opens GitLab MR.
+9. Agent 1 sends MR link back to the developer in Telegram.
 10. Human Reviewer reviews, approves, merges, or requests changes in GitLab.
 
 ### 7.2 Ideal account-based flow
@@ -185,9 +198,9 @@ sequenceDiagram
 | FR-01 | Accept one or more GitLab repo URLs from Telegram message. | Must |
 | FR-02 | Query Elastic for latest relevant Google / Apple / Flutter policy updates. | Must |
 | FR-03 | Return no-MR-needed response when no relevant update is found. | Must |
-| FR-04 | Pass repo list and Elastic update description to Antigravity CLI Coding Worker. | Must |
+| FR-04 | Pass workspace path, Elastic context, repo facts, and constraints to Antigravity CLI Coding Worker. | Must |
 | FR-05 | Antigravity CLI Coding Worker reads repository files and identifies affected Flutter / Android / iOS files. | Must |
-| FR-06 | Runtime MR Agent/GitLab automation creates branch, commits Antigravity-generated changes, and creates GitLab MR. | Must |
+| FR-06 | Agent 1/GitLab automation creates branch, commits Antigravity-generated changes, and creates GitLab MR. | Must |
 | FR-07 | MR description includes policy summary, affected files, code change summary, and human review note. | Must |
 | FR-08 | Telegram Bot sends final MR link to developer. | Must |
 | FR-09 | Store account-based repo list in MongoDB in ideal mode. | Should |
@@ -241,17 +254,17 @@ Each generated MR should include:
 | Antigravity modifies wrong files | Restrict the coding worker to the cloned repo workspace and review diff before commit. |
 | GitLab token leaks | Use environment secrets and never log token values. |
 | Policy Context Agent gets repo credentials | Keep GitLab token out of the policy-context agent environment. |
-| Runtime MR Agent writes Elastic records | Give runtime agent Elastic read-only credentials. |
+| Agent 1 writes Elastic records | Give `patchpilot-runtime` Elastic read-only credentials. |
 | Generated MR fails CI | Mark MR as draft or include validation status. |
 | Telegram command abused | Use Telegram allowlist / group allowlist. |
 
 ## 14. Acceptance criteria
 
 - Developer can send repo list via Telegram.
-- Runtime MR Agent receives and processes the repo list.
+- Agent 1, `patchpilot-runtime`, receives and processes the repo list.
 - Elastic returns structured policy update context from indexed docs.
 - Antigravity CLI Coding Worker creates code changes in a cloned workspace.
-- Runtime MR Agent/GitLab automation commits the generated diff to a GitLab branch.
+- Agent 1/GitLab automation commits the generated diff to a GitLab branch.
 - GitLab Merge Request is created.
 - Developer receives MR link in Telegram.
 - Human Reviewer is the final decision-maker.

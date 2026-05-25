@@ -9,7 +9,7 @@ time a developer sends `/check`.
 sequenceDiagram
     autonumber
     actor Admin as Admin / Scheduler
-    participant Ingest as Policy Context Agent
+    participant Ingest as Agent 2: policy-context
     participant Registry as Curated Source Registry
     participant Fetcher as Policy Fetcher
     participant Docs as Official Policy Sources

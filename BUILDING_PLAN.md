@@ -51,16 +51,16 @@ Flutter Developer
   ↓ sends repo list
 Telegram Bot
   ↓ forwards runtime input
-OpenClaw Runtime MR Agent
+Agent 1: patchpilot-runtime / Runtime MR Agent
   ↓ queries already-indexed platform update context
 Elastic Context Layer
   ↓ returns structured policy update
 
-OpenClaw Runtime MR Agent
+Agent 1: patchpilot-runtime / Runtime MR Agent
   ↓ gives repo list + Elastic context
 Antigravity CLI Coding Worker
   ↓ reads repo and edits code in cloned workspace
-Runtime MR Agent GitLab automation
+Agent 1 GitLab automation
   ↓ reviews diff, commits branch
 GitLab Repository
   ↓ creates
@@ -68,6 +68,24 @@ GitLab Merge Request
   ↓ reviewed by
 Human Reviewer
 ```
+
+---
+
+# OpenClaw Agent Ownership
+
+| Area | Agent 1: `patchpilot-runtime` | Agent 2: `policy-context` |
+|---|---|---|
+| Primary trigger | Telegram `/check` | Schedule or manual admin ingestion |
+| Main job | Turn repo input + Elastic policy context into GitLab MR | Keep Elastic updated with official platform policy records |
+| Elastic access | Read/query only | Write/upsert only |
+| GitLab access | Clone/fetch, branch, commit, create MR | None |
+| Antigravity access | Invoke CLI inside cloned workspace | None |
+| Web crawl access | None during `/check` | Curated official Google / Apple / Flutter sources only |
+| AI role | Build repo-specific task prompt and inspect result boundaries | Summarize, classify, extract requirements, define generic coding guidance |
+| Output | Telegram no-action message or GitLab MR link | Validated `platform_policy_updates` records and crawl audit logs |
+
+The agents share context only through Elastic. Agent 2 prepares reusable policy
+records. Agent 1 consumes those records and combines them with actual repo facts.
 
 ---
 
@@ -128,7 +146,7 @@ https://gitlab.com/company/flutter-app-1
 https://gitlab.com/company/flutter-app-2
 ```
 
-Bot forwards repo list to the OpenClaw Runtime MR Agent.
+Bot forwards repo list to Agent 1, `patchpilot-runtime`.
 
 ## Checklist
 
@@ -139,14 +157,14 @@ Bot forwards repo list to the OpenClaw Runtime MR Agent.
 - [ ] Parse GitLab repository URLs from message.
 - [ ] Validate repository URL format.
 - [ ] Return error if no valid repo URL is found.
-- [ ] Forward valid repo list to OpenClaw workflow.
+- [ ] Forward valid repo list to Agent 1, `patchpilot-runtime`.
 - [ ] Send initial response: “Checking latest native platform updates…”
 
 ## Acceptance Criteria
 
 - [ ] User can send one or more GitLab repo URLs.
 - [ ] Invalid input returns a helpful error.
-- [ ] Valid input triggers OpenClaw workflow.
+- [ ] Valid input triggers Agent 1 runtime workflow.
 
 ---
 
@@ -154,7 +172,7 @@ Bot forwards repo list to the OpenClaw Runtime MR Agent.
 
 Goal: crawl and index official platform policy sources before runtime repo checks.
 
-This flow is owned by the OpenClaw Policy Context Agent. It is separate from
+This flow is owned by Agent 2, `policy-context`. It is separate from
 Telegram `/check` and should run on a schedule or manual admin trigger, not
 every time a developer submits a repo.
 
@@ -186,6 +204,8 @@ for how Elastic records become an Antigravity coding task.
 ## Checklist
 
 - [ ] Create OpenClaw `policy-context` agent.
+- [ ] Give `policy-context` only crawler/fetcher, AI extraction, Elastic write/upsert, and audit-log tools.
+- [ ] Block `policy-context` from GitLab token, repo clone, Antigravity CLI, and MR creation tools.
 - [ ] Create Elasticsearch deployment or Elastic Cloud project.
 - [ ] Create index: `platform_policy_updates`.
 - [ ] Configure Elastic Web Crawler or custom fetcher.
@@ -193,10 +213,10 @@ for how Elastic records become an Antigravity coding task.
 - [ ] Index cleaned policy documents.
 - [ ] Add fields: `source`, `platform`, `title`, `url`, `content`, `summary`, `affected_files`, `severity`, `last_crawled_at`.
 - [ ] Extract structured requirements: API level, SDK version, tool version, effective date, severity, likely affected files, recommended action, and generic coding guidance.
-- [ ] Use AI only for summarization, classification, extraction, and relevance scoring.
+- [ ] Use AI only for summarization, classification, extraction, coding guidance, and relevance scoring.
 - [ ] Create query/tool in Elastic Agent Builder.
 - [ ] Return structured update description to the Runtime MR Agent.
-- [ ] Build coding-task payload with policy context, repo facts, expected changes, constraints, and validation commands.
+- [ ] Store generic coding guidance only; Agent 1 builds the concrete coding-task payload later with repo facts.
 
 ## Example Structured Update Description
 
@@ -239,11 +259,11 @@ for how Elastic records become an Antigravity coding task.
 
 # Phase 3 — Runtime MR Agent Workflow
 
-Goal: OpenClaw Runtime MR Agent orchestrates the flow from Telegram input to Antigravity CLI Coding Worker execution.
+Goal: Agent 1, `patchpilot-runtime`, orchestrates the flow from Telegram input to Antigravity CLI Coding Worker execution.
 
 ## Responsibilities
 
-Runtime MR Agent should:
+Agent 1 should:
 
 - Receive repo list from Telegram Bot.
 - Ask Elastic for relevant update context from already-indexed records.
@@ -255,14 +275,16 @@ Runtime MR Agent should:
 
 ## Checklist
 
-- [ ] Create OpenClaw workflow/session.
+- [ ] Create OpenClaw workflow/session for Agent 1, `patchpilot-runtime`.
 - [ ] Create OpenClaw `patchpilot-runtime` agent.
+- [ ] Give `patchpilot-runtime` Telegram, Elastic read, GitLab, workspace filesystem, git/exec, and Antigravity CLI tools.
+- [ ] Block `patchpilot-runtime` from Elastic write/upsert and policy crawling tools.
 - [ ] Add Telegram input handler.
 - [ ] Add Elastic query step.
 - [ ] Add condition: no relevant update vs relevant update found.
 - [ ] Add GitLab clone/workspace preparation step.
 - [ ] Install/authenticate Antigravity CLI in the isolated PatchPilot runtime.
-- [ ] Generate Antigravity task prompt from Elastic update context.
+- [ ] Generate Antigravity task prompt from Elastic update context plus repo facts.
 - [ ] Add Antigravity CLI Coding Worker task step.
 - [ ] Add diff inspection/safety boundary step.
 - [ ] Add Telegram notification step.
@@ -451,7 +473,8 @@ Human reviewer reviews the MR.
 - [ ] Add intentionally outdated native config.
 - [ ] Prepare Elastic index with at least one relevant policy document.
 - [ ] Prepare Telegram Bot.
-- [ ] Prepare OpenClaw workflow.
+- [ ] Prepare Agent 1 `patchpilot-runtime` workflow.
+- [ ] Prepare Agent 2 `policy-context` ingestion workflow.
 - [ ] Prepare Antigravity CLI auth/config in isolated PatchPilot runtime.
 - [ ] Prepare successful MR example.
 - [ ] Prepare fallback recording/screenshots.
@@ -493,6 +516,8 @@ MongoDB is useful when repo list needs to persist per user account.
 - [ ] Build OpenClaw flow.
 - [ ] Connect Telegram → OpenClaw.
 - [ ] Connect OpenClaw → Elastic.
+- [ ] Verify Agent 1 can only read Elastic and cannot crawl policy docs.
+- [ ] Verify Agent 2 can write Elastic and cannot access GitLab or Antigravity.
 
 ## Day 3
 
@@ -518,12 +543,14 @@ MongoDB is useful when repo list needs to persist per user account.
 # Definition of Done for Hackathon MVP
 
 - [ ] Developer can send repo list through Telegram.
-- [ ] Runtime MR Agent receives repo list.
+- [ ] Agent 1, `patchpilot-runtime`, receives repo list.
 - [ ] Elastic returns structured platform update context.
-- [ ] Runtime MR Agent clones or fetches the GitLab repo into an isolated workspace.
+- [ ] Agent 1 clones or fetches the GitLab repo into an isolated workspace.
 - [ ] Antigravity CLI Coding Worker reads the cloned GitLab repo workspace.
 - [ ] Antigravity CLI Coding Worker creates code changes in the cloned workspace.
-- [ ] Runtime MR Agent inspects generated diff before commit.
+- [ ] Agent 1 inspects generated diff before commit.
+- [ ] Agent 2, `policy-context`, can run policy ingestion separately from `/check`.
+- [ ] Agent 2 writes normalized policy records with `recommended_action` and `coding_guidance`.
 - [ ] GitLab branch is created.
 - [ ] GitLab Merge Request is created.
 - [ ] Developer receives MR link in Telegram.

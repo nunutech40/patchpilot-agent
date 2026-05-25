@@ -8,14 +8,14 @@ maintenance.
 
 ```txt
 OpenClaw Gateway
-├── patchpilot-runtime
+├── Agent 1: patchpilot-runtime
 │   ├── Telegram /check
 │   ├── Elastic read query
 │   ├── GitLab clone / branch / commit / MR
 │   ├── Antigravity CLI coding worker
 │   └── Telegram result notification
 │
-└── policy-context
+└── Agent 2: policy-context
     ├── Scheduled/manual policy ingestion
     ├── Curated source registry
     ├── Official docs fetcher
@@ -33,7 +33,7 @@ Policy Context Agent
 -> curated official source list
 -> fetch Google / Apple / Flutter docs
 -> clean content
--> AI summarize/classify/extract requirements
+-> AI summarize/classify/extract requirements and coding guidance
 -> validate normalized record
 -> upsert Elastic platform_policy_updates
 ```

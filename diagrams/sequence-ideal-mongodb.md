@@ -15,7 +15,7 @@ sequenceDiagram
         actor Reviewer as Human Reviewer
     end
     box Orchestration Area
-        participant OpenClaw as Runtime MR Agent
+        participant OpenClaw as Agent 1: patchpilot-runtime
     end
     box Data Storage Area
         participant Mongo as MongoDB
@@ -48,7 +48,7 @@ sequenceDiagram
     else Relevant update found
         loop For each target repository
             OpenClaw->>Repo: Clone/fetch target repo into isolated workspace
-            OpenClaw->>Antigravity: Send workspace path + Elastic update description
+            OpenClaw->>Antigravity: Send workspace path + Elastic context + repo facts
             loop Until code diff is ready
                 Antigravity->>Repo: Read repository files in cloned workspace
                 Antigravity->>Antigravity: Analyze affected Flutter / Android / iOS code

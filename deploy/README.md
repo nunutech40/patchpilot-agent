@@ -5,10 +5,11 @@ It must not be mixed with the company-detector/OpenClaw VPS.
 
 OpenClaw is the platform runtime. It hosts two PatchPilot agents:
 
-- `patchpilot-runtime`: user-facing Runtime MR Agent for Telegram `/check`,
+- Agent 1, `patchpilot-runtime`: user-facing Runtime MR Agent for Telegram `/check`,
   Elastic read queries, Antigravity execution, and GitLab MR creation.
-- `policy-context`: internal Policy Context Agent for scheduled/manual official
-  docs ingestion and Elastic upserts.
+- Agent 2, `policy-context`: internal Policy Context Agent for scheduled/manual
+  official docs ingestion, AI extraction, coding guidance definition, and
+  Elastic upserts.
 
 Antigravity CLI is the coding worker invoked by the Runtime MR Agent. It
 inspects cloned GitLab repositories, edits files, and runs lightweight
@@ -128,5 +129,5 @@ PatchPilot should use remote services for heavy work:
 - Do not expose ports `3001`, `3002`, or `18789` for PatchPilot.
 - Do not run PatchPilot from the company OpenClaw gateway.
 - Do not let Antigravity operate outside `/workspace` or the cloned target repo.
-- Do not give the Policy Context Agent a GitLab token.
-- Do not give the Runtime MR Agent Elastic write/upsert credentials.
+- Do not give Agent 2, `policy-context`, a GitLab token.
+- Do not give Agent 1, `patchpilot-runtime`, Elastic write/upsert credentials.

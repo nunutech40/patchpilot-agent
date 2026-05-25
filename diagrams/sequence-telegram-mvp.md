@@ -18,7 +18,7 @@ sequenceDiagram
         participant Telegram as Telegram Bot
     end
     box Orchestration Area
-        participant OpenClaw as Runtime MR Agent
+        participant OpenClaw as Agent 1: patchpilot-runtime
     end
     box Elastic Context Layer
         participant Elastic as Elastic Index + Agent Builder
@@ -47,7 +47,7 @@ sequenceDiagram
         Telegram->>Dev: Notify no relevant update found
     else Relevant update found
         OpenClaw->>Repo: Clone/fetch target repo into isolated workspace
-        OpenClaw->>Antigravity: Send workspace path + Elastic update description
+        OpenClaw->>Antigravity: Send workspace path + Elastic context + repo facts
         loop Until code diff is ready
             Antigravity->>Repo: Read repository files in cloned workspace
             Antigravity->>Antigravity: Analyze affected Flutter / Android / iOS code

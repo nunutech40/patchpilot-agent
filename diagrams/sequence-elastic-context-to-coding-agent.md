@@ -11,9 +11,9 @@ coding task.
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Policy as Policy Context Agent
+    participant Policy as Agent 2: policy-context
     participant Elastic as Elastic Index + Agent Builder
-    participant Runtime as Runtime MR Agent
+    participant Runtime as Agent 1: patchpilot-runtime
     participant GitLab as GitLab Repository
     participant Context as Context Builder
     participant Antigravity as Antigravity CLI Coding Worker
